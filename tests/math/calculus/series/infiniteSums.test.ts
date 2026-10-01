@@ -34,8 +34,4 @@ describe('infinite sums', () => {
     });
     expect(calculate('\\sum _{n=1}^{\\infty}\\frac{\\left(-1\\right)^{n+1}}{n}')).toMatchObject({ result: { decimal: '\\approx 0.69314718056' } });
   });
-
-  test('infinite products are not supported yet', () => {
-    expect(() => simplifyLatex('\\prod _{n=1}^{\\infty}n')).toThrow("aren't supported yet");
-  });
 });

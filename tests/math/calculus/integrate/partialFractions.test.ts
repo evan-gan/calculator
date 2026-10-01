@@ -6,10 +6,12 @@ import type { RationalPolynomial } from '../../../../src/math/number/rationalPol
 const poly = (...values: number[]): RationalPolynomial => values.map((value) => Rational.fromInt(value));
 const describeFractions = (numerator: RationalPolynomial, denominator: RationalPolynomial) => {
   const result = decomposePartialFractions(numerator, denominator);
-  if (!result) return null;
   return {
     linear: result.linear.map(({ root, power, coefficient }) => `${coefficient}/(x-${root})^${power}`),
-    quadratic: result.quadratic && { numerator: result.quadratic.numerator.map(String), denominator: result.quadratic.denominator.map(String) },
+    irreducible: result.irreducible && {
+      numerator: result.irreducible.numerator.map(String),
+      denominator: result.irreducible.denominator.map(String),
+    },
   };
 };
 
@@ -19,17 +21,20 @@ describe('partial fractions', () => {
   });
 
   test('repeated roots: 1/x² is a single power term', () => {
-    expect(describeFractions(poly(1), poly(0, 0, 1))).toEqual({ linear: ['1/(x-0)^2'], quadratic: null });
+    expect(describeFractions(poly(1), poly(0, 0, 1))).toEqual({ linear: ['1/(x-0)^2'], irreducible: null });
   });
 
   test('a leftover quadratic: 1/(x³ + x) = 1/x - x/(x² + 1)', () => {
     expect(describeFractions(poly(1), poly(0, 1, 0, 1))).toEqual({
       linear: ['1/(x-0)^1'],
-      quadratic: { numerator: ['0', '-1'], denominator: ['1', '0', '1'] },
+      irreducible: { numerator: ['0', '-1'], denominator: ['1', '0', '1'] },
     });
   });
 
-  test('irreducible factors above degree 2 are not handled', () => {
-    expect(describeFractions(poly(1), poly(1, 0, 0, 0, 1))).toBeNull();
+  test('a factor without rational roots of any degree is left whole: 1/(x⁵ + x) = 1/x - x³/(x⁴ + 1)', () => {
+    expect(describeFractions(poly(1), poly(0, 1, 0, 0, 0, 1))).toEqual({
+      linear: ['1/(x-0)^1'],
+      irreducible: { numerator: ['0', '0', '0', '-1'], denominator: ['1', '0', '0', '0', '1'] },
+    });
   });
 });

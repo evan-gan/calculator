@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest';
 import { Rational } from '../../../src/math/number/rational';
 import {
   dividePolynomials,
+  gcdPolynomials,
+  monicPolynomial,
   multiplyPolynomials,
   powerSeriesQuotient,
   shiftPolynomial,
@@ -34,5 +36,17 @@ describe('rational polynomials (lowest degree first)', () => {
 
   test('power series of 1/(1 - t) is 1 + t + t² + …', () => {
     expect(text(powerSeriesQuotient(poly(1), poly(1, -1), 4))).toEqual(['1', '1', '1', '1']);
+  });
+
+  test('gcd: (x - 1)(x + 2) and (x - 1)(x + 3) share x - 1', () => {
+    expect(text(gcdPolynomials(poly(-2, 1, 1), poly(-3, 2, 1)))).toEqual(['-1', '1']);
+  });
+
+  test('gcd of polynomials with no common factor is 1', () => {
+    expect(text(gcdPolynomials(poly(1, 0, 1), poly(-1, 1)))).toEqual(['1']);
+  });
+
+  test('monic: 2x² + 4 becomes x² + 2', () => {
+    expect(text(monicPolynomial(poly(4, 0, 2)))).toEqual(['2', '0', '1']);
   });
 });

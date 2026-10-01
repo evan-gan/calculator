@@ -15,14 +15,15 @@ import {
   type FunctionName,
   type Statement,
 } from '../ast/nodes';
-import { derivative, INFINITY, integral, series, type SeriesName } from '../ast/calculus';
+import { derivative, INFINITY, infinityDirection, integral, limit, series, type LimitSide, type SeriesName } from '../ast/calculus';
+import { containsVariable } from '../ast/inspect';
 import { MathError } from '../errors';
 import { Rational } from '../number/rational';
 import { tokenize, type Token } from './tokenize';
 
 // Pass 2 of parsing: tokens -> expression tree, by recursive descent.
 // Precedence (low to high): =, + -, explicit/implicit multiplication, unary minus, ^, ! and %
-// d/dx, Σ and Π act on the term that follows them (d/dx x² + 1 = 2x + 1);
+// d/dx, Σ, Π and lim act on the term that follows them (d/dx x² + 1 = 2x + 1);
 // an integral's body runs up to its differential (∫ x + 1 dx).
 
 const INVERSE_TRIG: Partial<Record<string, FunctionName>> = { sin: 'arcsin', cos: 'arccos', tan: 'arctan' };
@@ -206,9 +207,13 @@ class Parser {
       case 'function':
         return this.parseFunction(token.value);
       case 'bigOperator':
-        return token.value === 'integral' ? this.parseIntegral() : this.parseSeries(token.value as SeriesName);
+        if (token.value === 'integral') return this.parseIntegral();
+        if (token.value === 'limit') return this.parseLimit();
+        return this.parseSeries(token.value as SeriesName);
       case 'infinity':
-        throw new MathError('∞ can only be used as a limit of a sum or an integral.');
+        throw new MathError('∞ can only be used as a limit of a sum, an integral or lim.');
+      case 'side':
+        throw new MathError(`A + or - after a number only means something in a one-sided limit, like lim_{x→0⁺}.`);
       case 'end':
         throw new MathError('The expression ends too early. Something is missing at the end.');
       default:
@@ -240,7 +245,7 @@ class Parser {
   private parseFraction(): Expr {
     const numerator = this.parseRequiredArgument('fraction numerator');
     const denominator = this.parseRequiredArgument('fraction denominator');
-    return divide(numerator, denominator);
+    return divideIntoOperator(numerator, denominator) ?? divide(numerator, denominator);
   }
 
   private parseRoot(): Expr {
@@ -350,6 +355,25 @@ class Parser {
     return series(name, body, indexName, lower, upper);
   }
 
+  /** lim_{x→a} acting on the term after it; a may be ±∞, and a⁺ / a⁻ make it one-sided. */
+  private parseLimit(): Expr {
+    if (!this.isOperator('_')) throw new MathError('lim needs a subscript saying where the variable goes, like lim_{x→0}.');
+    this.advance();
+    this.expectOpenBrace('Write where the limit goes in braces after lim, like lim_{x→0}.');
+    const name = this.advance();
+    if (name.kind !== 'identifier' || !this.isOperator('→')) {
+      throw new MathError('Write the limit as a variable, an arrow and a point, like lim_{x→0}.');
+    }
+    this.advance();
+    const point = this.parseLimitValue();
+    let side: LimitSide = 0;
+    if (this.peek().kind === 'side') side = this.advance().value === '+' ? 1 : -1;
+    this.expectClose('{');
+    if (side !== 0 && infinityDirection(point) !== 0) throw new MathError('A limit at ∞ is already one-sided; leave out the + or -.');
+    const body = this.parseOperatorBody('lim', `lim_{${name.value}→0} sin(${name.value})/${name.value}`);
+    return limit(body, name.value, point, side);
+  }
+
   /** _{lower} and ^{upper} in either order; a sum's lower limit is written n=1. Empty boxes give null. */
   private parseLimits(operator: string): { lower: Expr | null; upper: Expr | null; indexName: string | null } {
     const limits: { lower: Expr | null; upper: Expr | null; indexName: string | null } = { lower: null, upper: null, indexName: null };
@@ -401,15 +425,28 @@ class Parser {
     return value;
   }
 
-  /** An ordinary expression, or ∞ / -∞ standing on its own. */
+  /** An ordinary expression, or ∞ / -∞ / +∞ standing on its own. */
   private parseLimitValue(): Expr {
     if (this.peek().kind === 'close') throw new MathError('A limit box is empty. Fill it in.');
-    const isNegative = this.isOperator('-') && this.tokenAt(1).kind === 'infinity';
-    if (this.peek().kind !== 'infinity' && !isNegative) return this.parseExpression();
-    this.index += isNegative ? 2 : 1;
+    const isSigned = (this.isOperator('-') || this.isOperator('+')) && this.tokenAt(1).kind === 'infinity';
+    if (this.peek().kind !== 'infinity' && !isSigned) return this.parseExpression();
+    const isNegative = isSigned && this.isOperator('-');
+    this.index += isSigned ? 2 : 1;
     if (this.peek().kind !== 'close') throw new MathError('∞ has to stand on its own as a limit, like ∞ or -∞.');
     return isNegative ? negate(INFINITY) : INFINITY;
   }
+}
+
+/**
+ * Typing "/" after lim_{x→0} sin x makes MathQuill put the whole operator on top: \frac{\lim_{x\to0}\sin x}{x}.
+ * When the bottom uses the operator's own variable (here x, which means nothing outside the limit),
+ * the division belongs inside: lim_{x→0} (sin x / x). The same goes for Σ and Π.
+ */
+function divideIntoOperator(numerator: Expr, denominator: Expr): Expr | null {
+  if (numerator.type !== 'func' || !['limit', 'sum', 'product'].includes(numerator.name)) return null;
+  const [body, marker, ...rest] = numerator.args;
+  if (marker.type !== 'var' || !containsVariable(denominator, marker.name)) return null;
+  return { ...numerator, args: [divide(body, denominator), marker, ...rest] };
 }
 
 /** Matches the raw tree the parser builds for "-1": mul(-1, 1). */

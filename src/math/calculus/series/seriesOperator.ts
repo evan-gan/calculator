@@ -1,4 +1,4 @@
-import { infinityDirection, readSeries, series, type SeriesName } from '../../ast/calculus';
+import { containsCalculusOperator, INFINITY, infinityDirection, readSeries, series, type SeriesName } from '../../ast/calculus';
 import { collectVariables, containsVariable } from '../../ast/inspect';
 import { func, num, type Expr, type FunctionNode } from '../../ast/nodes';
 import { MathError } from '../../errors';
@@ -6,11 +6,14 @@ import { evaluate } from '../../evaluate/evaluate';
 import { differenceOf, powerOf, productOf, quotientOf, sumOf } from '../../operations/arithmetic';
 import { simplify } from '../../simplify/simplify';
 import { closedFormSum, termAt } from './finiteSums';
+import { exactInfiniteProduct } from './infiniteProducts';
 import { exactInfiniteSum } from './infiniteSums';
-import { numericInfiniteSum } from './numericSeries';
+import { DIVERGES_MESSAGE, PRODUCT_DIVERGES_MESSAGE, PRODUCT_NOT_FOUND_MESSAGE, SUM_NOT_FOUND_MESSAGE } from './messages';
+import { numericInfiniteProduct, numericInfiniteSum } from './numericSeries';
 
 // Σ and Π. Closed forms are tried first; short finite ones are added up exactly term by term;
-// anything else stays unevaluated and displays as a numeric approximation.
+// anything else stays unevaluated and displays as a numeric approximation. Infinite products use
+// infiniteProducts.ts (rational factors) or Π b^g(n) = b^(Σ g(n)).
 
 // Each exact term is simplified on its own, so long sums get slow; beyond this they go numeric.
 const MAX_EXACT_TERMS = 500;
@@ -54,7 +57,7 @@ function simplifyInfiniteSum(term: Expr, index: string, lower: Expr, unevaluated
   if (exact) return exact;
   if (collectVariables(term).some((name) => name !== index)) return unevaluated;
   const approximate = numericInfiniteSum((n) => evaluate(term, { [index]: n }), Number(start));
-  if (approximate === null) throw new MathError("Couldn't find a value for this series: it diverges, or converges too slowly to compute.");
+  if (approximate === null) throw new MathError(SUM_NOT_FOUND_MESSAGE);
   return unevaluated;
 }
 
@@ -73,12 +76,40 @@ function simplifySum(term: Expr, index: string, lower: Expr, upper: Expr): Expr 
   return terms ? sumOf(...terms) : unevaluated;
 }
 
+/** Π b^g(n) = b^(Σ g(n)) for a constant base b; null when the sum has no closed form. */
+function productOfPowers(term: Expr, index: string, lower: Expr, upper: Expr): Expr | null {
+  if (term.type !== 'pow' || containsVariable(term.base, index)) return null;
+  let exponentSum: Expr;
+  try {
+    exponentSum = simplifySum(term.exponent, index, lower, upper);
+  } catch (error) {
+    // Π 2ⁿ to ∞ diverges because Σ n does; say so about the product.
+    const isAboutTheSum = error instanceof MathError && (error.message.startsWith(DIVERGES_MESSAGE) || error.message === SUM_NOT_FOUND_MESSAGE);
+    if (isAboutTheSum) throw new MathError(`${PRODUCT_DIVERGES_MESSAGE} (The sum of its exponents diverges.)`);
+    throw error;
+  }
+  return containsCalculusOperator(exponentSum) ? null : powerOf(term.base, exponentSum);
+}
+
+function simplifyInfiniteProduct(term: Expr, index: string, lower: Expr, unevaluated: Expr): Expr {
+  const start = integerLimit(lower);
+  if (start === null) return unevaluated;
+  const exact = exactInfiniteProduct(term, index, start) ?? productOfPowers(term, index, lower, INFINITY);
+  if (exact) return exact;
+  if (collectVariables(term).some((name) => name !== index)) return unevaluated;
+  const approximate = numericInfiniteProduct((n) => evaluate(term, { [index]: n }), Number(start));
+  if (approximate === null) throw new MathError(PRODUCT_NOT_FOUND_MESSAGE);
+  return unevaluated;
+}
+
 function simplifyProduct(term: Expr, index: string, lower: Expr, upper: Expr): Expr {
-  if (infinityDirection(upper) === 1) throw new MathError("Infinite products (Π up to ∞) aren't supported yet.");
+  if (infinityDirection(upper) === 1) return simplifyInfiniteProduct(term, index, lower, series('product', term, index, lower, upper));
   const [start, end] = [integerLimit(lower), integerLimit(upper)];
   if (start !== null && end !== null && end < start) return num(1);
   const count = sumOf(differenceOf(upper, lower), num(1));
   if (!containsVariable(term, index)) return powerOf(term, count);
+  const powers = productOfPowers(term, index, lower, upper);
+  if (powers) return powers;
   // Π_{n=a}^{b} n = b!/(a-1)!
   if (term.type === 'var' && start !== null && start >= 1n) {
     return quotientOf(simplify(func('factorial', upper)), simplify(func('factorial', num(start - 1n))));
@@ -107,6 +138,7 @@ export function evaluateSeries(call: FunctionNode, values: Record<string, number
   const end = evaluate(upper, values);
   const termAtIndex = (n: number) => evaluate(body, { ...values, [index]: n });
   if (call.name === 'sum' && end === Infinity) return numericInfiniteSum(termAtIndex, start) ?? NaN;
+  if (call.name === 'product' && end === Infinity) return numericInfiniteProduct(termAtIndex, start) ?? NaN;
   if (!Number.isInteger(start) || !Number.isInteger(end) || end - start > MAX_NUMERIC_TERMS) return NaN;
   let result = call.name === 'sum' ? 0 : 1;
   for (let n = start; n <= end; n++) result = call.name === 'sum' ? result + termAtIndex(n) : result * termAtIndex(n);

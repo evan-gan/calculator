@@ -32,6 +32,7 @@ describe('standard integrals (linear arguments)', () => {
   });
 
   test('unsupported integrands explain that no antiderivative was found', () => {
-    expect(() => simplifyLatex('\\int e^{x}\\sin x\\,dx')).toThrow("Couldn't find an exact antiderivative");
+    // e^(x²) has no antiderivative made of elementary functions.
+    expect(() => simplifyLatex('\\int e^{x^{2}}dx')).toThrow("Couldn't find an exact antiderivative");
   });
 });

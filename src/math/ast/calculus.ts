@@ -18,6 +18,8 @@ import {
 //   integral:   [body, variable]                 indefinite ∫ body dx
 //               [body, variable, lower, upper]   definite
 //   sum/product:[body, variable, lower, upper]   Σ/Π for variable = lower..upper
+//   limit:      [body, variable, point, side]    lim_{variable → point} body; point may be ±∞,
+//               side is 1 (from above, x → a⁺), -1 (from below, x → a⁻) or 0 (both sides)
 
 export type SeriesName = 'sum' | 'product';
 
@@ -43,7 +45,17 @@ export interface SeriesParts {
   upper: Expr;
 }
 
-const CALCULUS_OPERATORS = new Set<FunctionName>(['derivative', 'integral', 'sum', 'product']);
+/** Which side a limit approaches its point from: 1 = from above (a⁺), -1 = from below (a⁻), 0 = both. */
+export type LimitSide = -1 | 0 | 1;
+
+export interface LimitParts {
+  body: Expr;
+  variable: string;
+  point: Expr;
+  side: LimitSide;
+}
+
+const CALCULUS_OPERATORS = new Set<FunctionName>(['derivative', 'integral', 'sum', 'product', 'limit']);
 
 export function isCalculusOperator(name: FunctionName): name is CalculusOperatorName {
   return CALCULUS_OPERATORS.has(name);
@@ -63,6 +75,10 @@ export function integral(body: Expr, variableName: string, bounds: IntegralParts
 
 export function series(name: SeriesName, body: Expr, variableName: string, lower: Expr, upper: Expr): FunctionNode {
   return func(name, body, variable(variableName), lower, upper);
+}
+
+export function limit(body: Expr, variableName: string, point: Expr, side: LimitSide = 0): FunctionNode {
+  return func('limit', body, variable(variableName), point, num(side));
 }
 
 function variableNameOf(call: FunctionNode): string {
@@ -87,9 +103,15 @@ export function readSeries(call: FunctionNode): SeriesParts {
   return { body, variable: variableNameOf(call), lower, upper };
 }
 
+export function readLimit(call: FunctionNode): LimitParts {
+  const [body, , point, side] = call.args;
+  if (side?.type !== 'num') throw new Error('limit node is missing its side');
+  return { body, variable: variableNameOf(call), point, side: side.value.toNumber() as LimitSide };
+}
+
 /**
  * Variable that is local to the operator's body, or null when the body's variable stays free.
- * Σ_{n=1}^{5} n and ∫_0^1 x dx don't depend on n or x, but d/dx x² and ∫ x dx do depend on x
+ * Σ_{n=1}^{5} n, ∫_0^1 x dx and lim_{x→0} x don't depend on n or x, but d/dx x² and ∫ x dx do depend on x
  * (until a point is substituted into the derivative).
  */
 export function boundVariableOf(call: FunctionNode): string | null {
@@ -97,6 +119,7 @@ export function boundVariableOf(call: FunctionNode): string | null {
   switch (call.name) {
     case 'sum':
     case 'product':
+    case 'limit':
       return variableNameOf(call);
     case 'integral':
       return call.args.length === 4 ? variableNameOf(call) : null;

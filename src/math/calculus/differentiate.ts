@@ -70,7 +70,8 @@ function differentiateCall(call: FunctionNode, variable: string): Expr {
 function differentiateOperator(call: FunctionNode, variable: string): Expr {
   if (call.name === 'integral') return differentiateIntegral(call, variable);
   if (call.name === 'sum') return differentiateSum(call, variable);
-  throw new MathError(`Can't differentiate this ${call.name === 'product' ? 'product (Π)' : 'expression'} yet.`);
+  const what = call.name === 'product' ? 'product (Π)' : call.name === 'limit' ? 'limit' : 'expression';
+  throw new MathError(`Can't differentiate this ${what} yet.`);
 }
 
 /**

@@ -28,7 +28,7 @@ describe('tokenize', () => {
 
   test('inequalities and unknown commands give clear errors', () => {
     expect(() => tokenize('x<2')).toThrow('Inequalities are not supported');
-    expect(() => tokenize('\\lim x')).toThrow('isn\'t supported');
+    expect(() => tokenize('\\liminf x')).toThrow('isn\'t supported');
   });
 
   test('integrals, sums, products and infinity get their own tokens', () => {
@@ -42,5 +42,31 @@ describe('tokenize', () => {
       { kind: 'identifier', value: 'd' },
       { kind: 'identifier', value: 'x' },
     ]);
+  });
+
+  test('lim, arrows and one-sided markers', () => {
+    expect(tokenize('\\lim_{x\\to 0}').slice(0, 6)).toEqual([
+      { kind: 'bigOperator', value: 'limit' },
+      { kind: 'operator', value: '_' },
+      { kind: 'open', value: '{' },
+      { kind: 'identifier', value: 'x' },
+      { kind: 'operator', value: '→' },
+      { kind: 'number', value: '0' },
+    ]);
+    expect(tokenize('\\rightarrow →').slice(0, 2)).toEqual([
+      { kind: 'operator', value: '→' },
+      { kind: 'operator', value: '→' },
+    ]);
+  });
+
+  test('a sign just before a closing brace becomes a side marker: 0^{+}, 0^-, 0+', () => {
+    for (const latex of ['{x\\to 0^{+}}', '{x\\to 0^+}', '{x\\to 0+}']) {
+      expect(tokenize(latex).slice(3, 6)).toEqual([
+        { kind: 'number', value: '0' },
+        { kind: 'side', value: '+' },
+        { kind: 'close', value: '}' },
+      ]);
+    }
+    expect(tokenize('{x\\to 0^{-}}')[4]).toEqual({ kind: 'side', value: '-' });
   });
 });

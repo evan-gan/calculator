@@ -24,11 +24,11 @@ export type ElementaryFunctionName =
  * Calculus operators, stored as function calls whose second argument is the variable they
  * act on (a var node). Argument layouts live in ast/calculus.ts.
  */
-export type CalculusOperatorName = 'derivative' | 'integral' | 'sum' | 'product';
+export type CalculusOperatorName = 'derivative' | 'integral' | 'sum' | 'product' | 'limit';
 
 export type FunctionName = ElementaryFunctionName | CalculusOperatorName;
 
-/** `infinity` only appears as a limit of a sum or integral; the parser rejects it anywhere else. */
+/** `infinity` only appears as a limit of a sum, integral or lim (and as the value of a limit); the parser rejects it anywhere else. */
 export type ConstantName = 'pi' | 'e' | 'infinity';
 
 export type NumberNode = { type: 'num'; value: Rational };

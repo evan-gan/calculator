@@ -1,4 +1,4 @@
-import { containsCalculusOperator } from '../ast/calculus';
+import { containsCalculusOperator, infinityDirection } from '../ast/calculus';
 import { containsVariable } from '../ast/inspect';
 import { num, type Expr } from '../ast/nodes';
 import { evaluate } from '../evaluate/evaluate';
@@ -26,7 +26,9 @@ export function isTerminatingDecimal(value: Rational): boolean {
 }
 
 export function decimalRelation(expr: Expr): string {
-  return expr.type === 'num' && isTerminatingDecimal(expr.value) ? '=' : '\\approx ';
+  // ∞ (a limit's value) is exact in both modes.
+  const isExact = (expr.type === 'num' && isTerminatingDecimal(expr.value)) || infinityDirection(expr) !== 0;
+  return isExact ? '=' : '\\approx ';
 }
 
 /**

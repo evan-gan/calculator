@@ -4,6 +4,7 @@ import type { FunctionNode } from '../ast/nodes';
 import { MathError } from '../errors';
 import { evaluate, type VariableValues } from '../evaluate/evaluate';
 import { simplify } from '../simplify/simplify';
+import { evaluateLimit } from './limit/limitOperator';
 import { numericIntegral } from './numericIntegral';
 import { evaluateSeries } from './series/seriesOperator';
 import { findSingularPoints } from './singularPoints';
@@ -22,9 +23,10 @@ function evaluateDefiniteIntegral(call: FunctionNode, values: VariableValues): n
   return numericIntegral((x) => evaluate(body, { ...values, [variable]: x }), start, end, breakpoints) ?? NaN;
 }
 
-/** Float value of a derivative, integral, sum or product node; NaN when it has none. */
+/** Float value of a derivative, integral, sum, product or limit node; NaN when it has none. */
 export function evaluateCalculus(call: FunctionNode, values: VariableValues): number {
   if (call.name === 'sum' || call.name === 'product') return evaluateSeries(call, values);
+  if (call.name === 'limit') return evaluateLimit(call, values);
   if (call.name === 'integral' && call.args.length === 4) return evaluateDefiniteIntegral(call, values);
   // Derivatives and indefinite integrals: evaluate the exact result.
   try {

@@ -6,7 +6,7 @@ import { evaluate } from '../evaluate/evaluate';
 import { differenceOf } from '../operations/arithmetic';
 import { simplify } from '../simplify/simplify';
 import { findAntiderivative } from './integrate/antiderivative';
-import { limitAtInfinity, limitAtPoint } from './limits';
+import { limitAtInfinity, limitAtPoint } from './antiderivativeLimits';
 import { numericIntegral } from './numericIntegral';
 import { findSingularPoints } from './singularPoints';
 

@@ -9,9 +9,10 @@ export type TokenKind =
   | 'function' // sin, ln, log, ...
   | 'frac'
   | 'sqrt'
-  | 'bigOperator' // \int, \sum, \prod   (value: integral | sum | product)
+  | 'bigOperator' // \int, \sum, \prod, \lim   (value: integral | sum | product | limit)
   | 'infinity'
-  | 'operator' // + - * / ^ _ = ! , %
+  | 'operator' // + - * / ^ _ = ! , % and → (from \to)
+  | 'side' // the + or - of a one-sided limit, x → 0⁺   (value: + or -)
   | 'open' // ( [ {   (value holds which)
   | 'close' // ) ] }
   | 'absOpen'
@@ -30,11 +31,13 @@ const GREEK_LETTERS = new Set([
   'mu', 'nu', 'xi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega', 'varphi', 'vartheta',
 ]);
 
-const BIG_OPERATORS: Record<string, string> = { int: 'integral', sum: 'sum', prod: 'product' };
+const BIG_OPERATORS: Record<string, string> = { int: 'integral', sum: 'sum', prod: 'product', lim: 'limit' };
+
+const ARROW_COMMANDS = new Set(['to', 'rightarrow', 'longrightarrow']);
 
 const SPACING_COMMANDS = new Set([' ', ',', ':', ';', '!']);
 
-const UNICODE_OPERATORS: Record<string, string> = { '·': '*', '×': '*', '÷': '/', '−': '-' };
+const UNICODE_OPERATORS: Record<string, string> = { '·': '*', '×': '*', '÷': '/', '−': '-', '→': '→' };
 
 // \operatorname{...} names that map onto built-in functions.
 const OPERATOR_NAME_ALIASES: Record<string, string> = { abs: 'abs', arcsin: 'arcsin', arccos: 'arccos', arctan: 'arctan' };
@@ -48,7 +51,7 @@ class Tokenizer {
   run(): Token[] {
     while (this.position < this.source.length) this.readNext();
     this.tokens.push({ kind: 'end', value: '' });
-    return this.tokens;
+    return markLimitSides(this.tokens);
   }
 
   private peekChar(offset = 0): string {
@@ -169,6 +172,7 @@ class Tokenizer {
     if (name === 'pi') return this.push('constant', 'pi');
     if (name === 'infty') return this.push('infinity', 'infinity');
     if (BIG_OPERATORS[name]) return this.push('bigOperator', BIG_OPERATORS[name]);
+    if (ARROW_COMMANDS.has(name)) return this.push('operator', '→');
     if (FUNCTION_COMMANDS.has(name)) return this.push('function', name);
     if (GREEK_LETTERS.has(name)) return this.pushIdentifier(`\\${name}`);
     if (name === 'operatorname') return this.readOperatorName();
@@ -211,6 +215,37 @@ class Tokenizer {
     if (side === 'right' && ')]'.includes(delimiter)) return this.push('close', delimiter);
     throw new MathError(`Unsupported bracket "${delimiter}".`);
   }
+}
+
+const isToken = (token: Token | undefined, kind: TokenKind, value?: string) =>
+  token !== undefined && token.kind === kind && (value === undefined || token.value === value);
+
+const isSign = (token: Token | undefined) => isToken(token, 'operator', '+') || isToken(token, 'operator', '-');
+
+/**
+ * The side of a one-sided limit sits right before the closing brace of lim's subscript and is
+ * written 0^{+}, 0^+ or 0+. Each of those becomes one 'side' token. Nowhere else can a sign be
+ * followed by a closing brace, so this never changes the meaning of valid input.
+ */
+function markLimitSides(tokens: Token[]): Token[] {
+  const result: Token[] = [];
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index];
+    const isBracedScript =
+      isToken(token, 'operator', '^') && isToken(tokens[index + 1], 'open', '{') && isSign(tokens[index + 2]) && isToken(tokens[index + 3], 'close');
+    if (isBracedScript && isToken(tokens[index + 4], 'close')) {
+      result.push({ kind: 'side', value: tokens[index + 2].value });
+      index += 3;
+    } else if (isToken(token, 'operator', '^') && isSign(tokens[index + 1]) && isToken(tokens[index + 2], 'close')) {
+      result.push({ kind: 'side', value: tokens[index + 1].value });
+      index += 1;
+    } else if (isSign(token) && isToken(tokens[index + 1], 'close') && index > 0 && !isToken(tokens[index - 1], 'open')) {
+      result.push({ kind: 'side', value: token.value });
+    } else {
+      result.push(token);
+    }
+  }
+  return result;
 }
 
 export function tokenize(latex: string): Token[] {

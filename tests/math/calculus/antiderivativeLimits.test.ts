@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { limitAtInfinity, limitAtPoint } from '../../../src/math/calculus/limits';
+import { limitAtInfinity, limitAtPoint } from '../../../src/math/calculus/antiderivativeLimits';
 import { num } from '../../../src/math/ast/nodes';
 import { toLatex } from '../../../src/math/format/toLatex';
 import { simplify } from '../../../src/math/simplify/simplify';

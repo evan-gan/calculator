@@ -6,6 +6,7 @@ import { differenceOf, powerOf, productOf, quotientOf, sumOf } from '../../opera
 import { simplify } from '../../simplify/simplify';
 import { toPolynomial } from '../../solve/polynomial/extract';
 import { powerSumPolynomial } from './bernoulli';
+import { telescopingSum } from './telescoping';
 
 // Closed forms for Σ_{n=a}^{b} f(n) that work for symbolic limits too.
 
@@ -44,10 +45,10 @@ function geometricSum(term: Expr, index: string, ratio: Expr, lower: Expr, upper
   return quotientOf(productOf(first, differenceOf(num(1), powerOf(ratio, count))), differenceOf(num(1), ratio));
 }
 
-/** Exact Σ_{n=lower}^{upper} for polynomial or geometric terms, or null. */
+/** Exact Σ_{n=lower}^{upper} for polynomial, geometric or telescoping terms, or null. */
 export function closedFormSum(term: Expr, index: string, lower: Expr, upper: Expr): Expr | null {
   const coefficients = toPolynomial(term, index);
   if (coefficients) return polynomialSum(coefficients, lower, upper);
   const ratio = geometricRatio(term, index);
-  return ratio ? geometricSum(term, index, ratio, lower, upper) : null;
+  return ratio ? geometricSum(term, index, ratio, lower, upper) : telescopingSum(term, index, lower, upper);
 }

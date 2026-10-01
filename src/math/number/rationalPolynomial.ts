@@ -58,6 +58,19 @@ export function dividePolynomials(
   return { quotient: trimPolynomial(quotient), remainder };
 }
 
+/** Divide every coefficient by the leading one, so the polynomial starts with 1·xⁿ. */
+export function monicPolynomial(polynomial: RationalPolynomial): RationalPolynomial {
+  if (polynomial.length === 0) return [];
+  return scalePolynomial(polynomial, polynomial[polynomial.length - 1].inverse());
+}
+
+/** Monic greatest common divisor by Euclid's algorithm; [1] when the polynomials share no factor. */
+export function gcdPolynomials(first: RationalPolynomial, second: RationalPolynomial): RationalPolynomial {
+  let [larger, smaller] = [trimPolynomial(first), trimPolynomial(second)];
+  while (smaller.length > 0) [larger, smaller] = [smaller, dividePolynomials(larger, smaller).remainder];
+  return larger.length === 0 ? [Rational.ONE] : monicPolynomial(larger);
+}
+
 function binomial(n: number, k: number): bigint {
   let result = 1n;
   for (let step = 1; step <= k; step++) result = (result * BigInt(n - k + step)) / BigInt(step);

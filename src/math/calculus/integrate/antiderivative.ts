@@ -7,9 +7,11 @@ import { productOf, sumOf } from '../../operations/arithmetic';
 import { simplify } from '../../simplify/simplify';
 import { derivativeOf } from '../differentiate';
 import { partsMethod } from './byParts';
+import { exponentialTrigMethod } from './exponentialTrig';
 import { rationalFunctionMethod } from './rationalFunction';
 import { substitutionMethod } from './substitution';
 import { tableMethod } from './table';
+import { trigPowerMethod } from './trigPowers';
 import type { Integrate, IntegrationMethod } from './types';
 
 // Entry point for finding antiderivatives. Constants and sums are split off first, then each
@@ -21,7 +23,15 @@ const expansionMethod: IntegrationMethod = (expr, _variable, integrate) => {
   return toKey(expanded) !== toKey(expr) && expanded.type === 'add' ? integrate(expanded) : null;
 };
 
-const METHODS: IntegrationMethod[] = [tableMethod, rationalFunctionMethod, substitutionMethod, partsMethod, expansionMethod];
+const METHODS: IntegrationMethod[] = [
+  tableMethod,
+  rationalFunctionMethod,
+  trigPowerMethod,
+  exponentialTrigMethod,
+  substitutionMethod,
+  partsMethod,
+  expansionMethod,
+];
 
 // Substitution and parts call back into the engine; this bounds how deep that can go.
 const MAX_DEPTH = 8;

@@ -1,39 +1,15 @@
 import { containsVariable } from '../../ast/inspect';
 import { add, func, mul, num, pow, variable as variableNode, type Expr } from '../../ast/nodes';
 import { Rational } from '../../number/rational';
-import {
-  dividePolynomials,
-  polynomialToExpr,
-  toRationalPolynomial,
-  type RationalPolynomial,
-} from '../../number/rationalPolynomial';
-import { negated, powerOf, productOf } from '../../operations/arithmetic';
-import { toPolynomial } from '../../solve/polynomial/extract';
+import { dividePolynomials, polynomialToExpr, type RationalPolynomial } from '../../number/rationalPolynomial';
+import { toRationalFunction } from '../readRationalFunction';
 import { decomposePartialFractions, type LinearFraction } from './partialFractions';
-import { integrateReciprocalQuadratic, logOfQuadratic, type QuadraticCoefficients } from './quadratic';
+import { integrateOverRealFactors } from './splitOverRealFactors';
 import type { IntegrationMethod } from './types';
 
-// ∫ N(x)/D(x) dx for polynomials with rational coefficients:
-// long division for the polynomial part, then partial fractions for the rest.
-
-function isNegativeIntegerPower(factor: Expr): factor is Extract<Expr, { type: 'pow' }> {
-  return factor.type === 'pow' && factor.exponent.type === 'num' && factor.exponent.value.isInteger() && factor.exponent.value.isNegative();
-}
-
-/** Split a simplified term into rational-coefficient polynomials N and D with term = N/D. */
-function splitFraction(expr: Expr, variable: string): { numerator: RationalPolynomial; denominator: RationalPolynomial } | null {
-  const factors = expr.type === 'mul' ? expr.factors : [expr];
-  const top = factors.filter((factor) => !isNegativeIntegerPower(factor));
-  // (x+1)^-2 contributes (x+1)^2 to the denominator.
-  const bottom = factors.filter(isNegativeIntegerPower).map((factor) => powerOf(factor.base, negated(factor.exponent)));
-  const numeratorCoefficients = toPolynomial(productOf(...top), variable);
-  const denominatorCoefficients = toPolynomial(productOf(...bottom), variable);
-  if (!numeratorCoefficients || !denominatorCoefficients) return null;
-  const numerator = toRationalPolynomial(numeratorCoefficients);
-  const denominator = toRationalPolynomial(denominatorCoefficients);
-  if (!numerator || !denominator || denominator.length === 0) return null;
-  return { numerator, denominator };
-}
+// ∫ N(x)/D(x) dx for polynomials with rational coefficients: long division for the polynomial
+// part, partial fractions over D's rational roots, and the rest over D's real factors with
+// irrational coefficients (x⁴ + 1 = (x² + √2x + 1)(x² - √2x + 1)).
 
 /** ∫ Σ cₖ xᵏ dx = Σ cₖ x^(k+1)/(k+1) */
 function integratePolynomial(polynomial: RationalPolynomial, variable: string): Expr {
@@ -49,33 +25,19 @@ function integrateLinearFraction({ root, power, coefficient }: LinearFraction, v
   return mul(num(scale), pow(shifted, num(1 - power)));
 }
 
-/** (Bx + C)/(px² + qx + s) = B/(2p)·(2px + q)/Q + (C - Bq/(2p))/Q: a logarithm plus the reciprocal rule. */
-function integrateQuadraticFraction(numerator: RationalPolynomial, denominator: RationalPolynomial, variable: string): Expr | null {
-  const [constant = Rational.ZERO, slope = Rational.ZERO] = numerator;
-  const [s, q, p] = denominator;
-  const coefficients: QuadraticCoefficients = { p: num(p), q: num(q), s: num(s) };
-  const logScale = slope.div(p.mul(Rational.fromInt(2)));
-  const reciprocalScale = constant.sub(logScale.mul(q));
-  const reciprocal = reciprocalScale.isZero() ? num(0) : integrateReciprocalQuadratic(coefficients, variable);
-  if (!reciprocal) return null;
-  return add(mul(num(logScale), logOfQuadratic(coefficients, variable)), mul(num(reciprocalScale), reciprocal));
-}
-
 export const rationalFunctionMethod: IntegrationMethod = (expr, variable) => {
   if (!containsVariable(expr, variable)) return null;
-  const fraction = splitFraction(expr, variable);
+  const fraction = toRationalFunction(expr, variable);
   if (!fraction) return null;
   const { quotient, remainder } = dividePolynomials(fraction.numerator, fraction.denominator);
   const pieces: Expr[] = [integratePolynomial(quotient, variable)];
   if (remainder.length > 0) {
-    const partialFractions = decomposePartialFractions(remainder, fraction.denominator);
-    if (!partialFractions) return null;
-    pieces.push(...partialFractions.linear.map((piece) => integrateLinearFraction(piece, variable)));
-    if (partialFractions.quadratic) {
-      const { numerator, denominator } = partialFractions.quadratic;
-      const quadraticPart = integrateQuadraticFraction(numerator, denominator, variable);
-      if (!quadraticPart) return null;
-      pieces.push(quadraticPart);
+    const { linear, irreducible } = decomposePartialFractions(remainder, fraction.denominator);
+    pieces.push(...linear.map((piece) => integrateLinearFraction(piece, variable)));
+    if (irreducible) {
+      const rest = integrateOverRealFactors(irreducible.numerator, irreducible.denominator, variable);
+      if (!rest) return null;
+      pieces.push(rest);
     }
   }
   return add(...pieces);

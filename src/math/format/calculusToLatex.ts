@@ -1,8 +1,8 @@
-import { readDerivative, readIntegral, readSeries } from '../ast/calculus';
+import { readDerivative, readIntegral, readLimit, readSeries } from '../ast/calculus';
 import type { Expr, FunctionNode } from '../ast/nodes';
 import { toLatex } from './toLatex';
 
-// LaTeX for calculus operators that stay unevaluated (∫_0^1 e^{x²} dx, Σ with a symbolic limit).
+// LaTeX for calculus operators that stay unevaluated (∫_0^1 e^{x²} dx, Σ with a symbolic limit, lim).
 
 /** Sums need brackets so the operator's reach is clear: Σ (n + 1) rather than Σ n + 1. */
 function bodyToLatex(body: Expr): string {
@@ -20,6 +20,11 @@ export function calculusToLatex(call: FunctionNode): string {
       const power = order === 1 ? '' : `^{${order}}`;
       const operator = `\\frac{d${power}}{d${variable}${power}}\\left(${toLatex(body)}\\right)`;
       return point ? `${operator}_{${variable}=${toLatex(point)}}` : operator;
+    }
+    case 'limit': {
+      const { body, variable, point, side } = readLimit(call);
+      const sideMark = side === 0 ? '' : `^{${side === 1 ? '+' : '-'}}`;
+      return `\\lim_{${variable}\\to ${toLatex(point)}${sideMark}}${bodyToLatex(body)}`;
     }
     case 'integral': {
       const { body, variable, bounds } = readIntegral(call);

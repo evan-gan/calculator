@@ -69,3 +69,24 @@ export function numericInfiniteSum(term: TermFunction, start: number): number | 
   const slope = (term(next + 1e-3) - term(next - 1e-3)) / 2e-3;
   return total + tailIntegral + term(next) / 2 - slope / 12;
 }
+
+// Factors are multiplied directly until they settle close to 1; at most this many.
+const MAX_DIRECT_FACTORS = 1000;
+
+/**
+ * Float value of Π_{n=start}^{∞} a(n): the first factors directly, then exp(Σ ln a(n)) for the
+ * tail, once the factors are positive and near 1. Null when it diverges or can't be computed.
+ */
+export function numericInfiniteProduct(factor: TermFunction, start: number): number | null {
+  let product = 1;
+  let n = start;
+  for (; n < start + MAX_DIRECT_FACTORS; n++) {
+    const value = factor(n);
+    if (!Number.isFinite(value)) return null;
+    if (value === 0) return 0;
+    if (value > 0 && Math.abs(value - 1) < 0.5) break;
+    product *= value;
+  }
+  const logTail = numericInfiniteSum((m) => Math.log(factor(m)), n);
+  return logTail === null ? null : product * Math.exp(logTail);
+}

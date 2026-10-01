@@ -13,8 +13,9 @@ import {
 import { deflate, evaluatePolynomial, extractRationalRoots } from '../../solve/polynomial/rationalRoots';
 
 // Partial fractions for N(x)/D(x) with deg N < deg D:
-//   Σ c / (x - r)^k  over D's rational roots r,  plus  (Bx + C)/Q(x)  for one leftover quadratic.
-// Denominators with a leftover irreducible factor of degree 3+ are not handled (null).
+//   Σ c / (x - r)^k  over D's rational roots r,  plus  M(x)/Q(x)  for the factor Q of D that has
+// no rational roots (a quadratic like x² + 1, or x⁴ + 1). Splitting Q further needs irrational
+// coefficients; realFactors.ts and splitOverRealFactors.ts do that part.
 
 export interface LinearFraction {
   root: Rational;
@@ -24,11 +25,11 @@ export interface LinearFraction {
 
 export interface PartialFractions {
   linear: LinearFraction[];
-  /** (Bx + C)/(px² + qx + s), or null when every factor of D is linear. */
-  quadratic: { numerator: RationalPolynomial; denominator: RationalPolynomial } | null;
+  /** M(x)/Q(x) over the factor without rational roots, or null when every factor of D is linear. */
+  irreducible: { numerator: RationalPolynomial; denominator: RationalPolynomial } | null;
 }
 
-type RootWithMultiplicity = { root: Rational; multiplicity: number };
+export type RootWithMultiplicity = { root: Rational; multiplicity: number };
 
 function deflateTimes(polynomial: RationalPolynomial, root: Rational, times: number): RationalPolynomial {
   let result = polynomial;
@@ -37,7 +38,7 @@ function deflateTimes(polynomial: RationalPolynomial, root: Rational, times: num
 }
 
 /** Rational roots of D with multiplicities, and what is left after dividing them out. */
-function factorRationalRoots(denominator: RationalPolynomial): { roots: RootWithMultiplicity[]; remaining: RationalPolynomial } {
+export function factorRationalRoots(denominator: RationalPolynomial): { roots: RootWithMultiplicity[]; remaining: RationalPolynomial } {
   const roots: RootWithMultiplicity[] = [];
   // The rational root search needs a non-zero constant term, so pull out powers of x first.
   const zeroMultiplicity = denominator.findIndex((coefficient) => !coefficient.isZero());
@@ -79,20 +80,19 @@ function monicRootProduct(roots: RootWithMultiplicity[]): RationalPolynomial {
   );
 }
 
-/** Split N/D into partial fractions; null if D has an irreducible factor above degree 2. */
-export function decomposePartialFractions(numerator: RationalPolynomial, denominator: RationalPolynomial): PartialFractions | null {
+/** Split N/D into partial fractions over D's rational roots, plus the part over what remains. */
+export function decomposePartialFractions(numerator: RationalPolynomial, denominator: RationalPolynomial): PartialFractions {
   const { roots, remaining } = factorRationalRoots(denominator);
-  if (degreeOf(remaining) > 2) return null;
   const linear = roots.flatMap((root) => fractionsAtRoot(numerator, denominator, root));
-  if (degreeOf(remaining) < 1) return { linear, quadratic: null };
+  if (degreeOf(remaining) < 1) return { linear, irreducible: null };
 
-  // Whatever the linear fractions don't account for sits over the quadratic:
-  // (N - Σ c·D/(x - r)^k) / Π(x - r)^m = Bx + C.
+  // Whatever the linear fractions don't account for sits over the remaining factor:
+  // (N - Σ c·D/(x - r)^k) / Π(x - r)^m = M(x).
   const linearNumerator = linear.reduce(
     (total, { root, power, coefficient }) => addPolynomials(total, scalePolynomial(deflateTimes(denominator, root, power), coefficient)),
     [] as RationalPolynomial,
   );
   const { quotient, remainder } = dividePolynomials(subtractPolynomials(numerator, linearNumerator), monicRootProduct(roots));
   if (remainder.length > 0) throw new Error('Partial fraction decomposition left a remainder');
-  return { linear, quadratic: { numerator: quotient, denominator: remaining } };
+  return { linear, irreducible: { numerator: quotient, denominator: remaining } };
 }
