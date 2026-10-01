@@ -1,0 +1,97 @@
+/* Shared design tokens. Re-skin the whole app by editing this file only. */
+:root {
+  color-scheme: light;
+  --color-bg: #f3f3f3;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f7f9;
+  --color-border: #d0d0d0;
+  --color-row-border: #dadada;
+  --color-text: #1f1f1f;
+  --color-text-muted: #6b6b6b;
+  --color-accent: #2f72dc;
+  --color-accent-text: #ffffff;
+  --color-accent-soft: #d6e3f7;
+  --color-accent-strong-text: #2257b3;
+  --color-error: #b3261e;
+  --color-error-soft: #fbe9e7;
+  --color-success: #1e7a46;
+  --color-success-soft: #e3f4ea;
+  --color-keypad-bg: #ededed;
+  --color-key-number: #cfcfcf;
+  --color-key-plain: #fafafa;
+  --color-key-control: #cfcfcf;
+  --color-key-border: #c4c4c4;
+  --color-key-icon-muted: #b9b9b9;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius-small: 4px;
+  --radius-medium: 8px;
+
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Key faces use a serif like the typeset math so sin, π and a² match the display. */
+  --font-math: 'Times New Roman', Times, 'Symbola', serif;
+  --font-size-small: 0.8125rem;
+  --font-size-body: 1rem;
+  --font-size-key: 1.6rem;
+  --font-size-math: 1.6rem;
+
+  --key-height: 54px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  --color-bg: #0f1115;
+    --color-surface: #16181d;
+    --color-surface-muted: #1d2027;
+    --color-border: #343943;
+    --color-row-border: #2a2e36;
+    --color-text: #e8eaee;
+    --color-text-muted: #9aa1ad;
+    --color-accent: #4f8ff0;
+    --color-accent-text: #0b1220;
+    --color-accent-soft: #22324d;
+    --color-accent-strong-text: #9cc0ff;
+    --color-error: #f2958d;
+    --color-error-soft: #3a2220;
+    --color-success: #7fd3a1;
+    --color-success-soft: #1d3428;
+    --color-keypad-bg: #1e2128;
+    --color-key-number: #3b404c;
+    --color-key-plain: #2a2e37;
+    --color-key-control: #3b404c;
+    --color-key-border: #444a57;
+    --color-key-icon-muted: #555b67;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #0f1115;
+  --color-surface: #16181d;
+  --color-surface-muted: #1d2027;
+  --color-border: #343943;
+  --color-row-border: #2a2e36;
+  --color-text: #e8eaee;
+  --color-text-muted: #9aa1ad;
+  --color-accent: #4f8ff0;
+  --color-accent-text: #0b1220;
+  --color-accent-soft: #22324d;
+  --color-accent-strong-text: #9cc0ff;
+  --color-error: #f2958d;
+  --color-error-soft: #3a2220;
+  --color-success: #7fd3a1;
+  --color-success-soft: #1d3428;
+  --color-keypad-bg: #1e2128;
+  --color-key-number: #3b404c;
+  --color-key-plain: #2a2e37;
+  --color-key-control: #3b404c;
+  --color-key-border: #444a57;
+  --color-key-icon-muted: #555b67;
+}

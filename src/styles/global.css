@@ -1,0 +1,44 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* MathQuill draws its own borders; rows show focus instead. */
+.mq-editable-field,
+.mq-editable-field.mq-focused {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.mq-editable-field,
+.mq-math-mode {
+  color: var(--color-text);
+}
+
+.mq-editable-field .mq-cursor {
+  border-left-color: var(--color-text) !important;
+}
+
+.mq-math-mode .mq-selection,
+.mq-editable-field .mq-selection {
+  background: var(--color-accent-soft) !important;
+}
