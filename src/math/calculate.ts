@@ -1,3 +1,4 @@
+import { containsCalculusOperator, containsIndefiniteIntegral } from './ast/calculus';
 import { collectVariables } from './ast/inspect';
 import { num, subtract, type Expr, type Statement } from './ast/nodes';
 import { MathError } from './errors';
@@ -31,14 +32,27 @@ export type CalculationResult =
 
 function evaluateNumber(expr: Expr): CalculationResult {
   const exact = simplify(expr);
-  const decimal = exprToDecimalLatex(exact);
-  return { kind: 'value', result: { exact: `=${toLatex(exact)}`, decimal: `${decimalRelation(exact)}${decimal}` } };
+  const decimal = `${decimalRelation(exact)}${exprToDecimalLatex(exact)}`;
+  // An integral or series with no exact value would only be restated; show its approximation instead.
+  if (containsCalculusOperator(exact)) return { kind: 'value', result: { exact: decimal, decimal } };
+  return { kind: 'value', result: { exact: `=${toLatex(exact)}`, decimal } };
+}
+
+/** Indefinite integrals are only known up to a constant, so their results end in + C. */
+function withIntegrationConstant(latex: string): string {
+  return latex === '0' ? 'C' : `${latex}+C`;
 }
 
 function simplifyWithVariables(expr: Expr, variables: string[]): CalculationResult {
   const simplified = simplify(expr);
-  const result = { exact: `=${toLatex(simplified)}`, decimal: `=${toDecimalLatexWithVariables(simplified)}` };
-  if (variables.length !== 1) return { kind: 'simplified', result, roots: null, variable: null };
+  const isIndefinite = containsIndefiniteIntegral(expr);
+  const finish = (latex: string) => `=${isIndefinite ? withIntegrationConstant(latex) : latex}`;
+  const result = { exact: finish(toLatex(simplified)), decimal: finish(toDecimalLatexWithVariables(simplified)) };
+  // Roots of an antiderivative depend on the unknown constant, so they aren't shown. An unevaluated
+  // integral or series would need thousands of numeric evaluations to scan for roots, so it's skipped too.
+  if (variables.length !== 1 || isIndefinite || containsCalculusOperator(simplified)) {
+    return { kind: 'simplified', result, roots: null, variable: null };
+  }
   // With a single variable, also report where the expression equals zero.
   const outcome = solveEquation(expr, num(0), variables[0]);
   const roots = outcome.kind === 'solutions' ? formatSolveOutcome(outcome) : null;

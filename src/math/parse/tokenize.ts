@@ -9,6 +9,8 @@ export type TokenKind =
   | 'function' // sin, ln, log, ...
   | 'frac'
   | 'sqrt'
+  | 'bigOperator' // \int, \sum, \prod   (value: integral | sum | product)
+  | 'infinity'
   | 'operator' // + - * / ^ _ = ! , %
   | 'open' // ( [ {   (value holds which)
   | 'close' // ) ] }
@@ -27,6 +29,8 @@ const GREEK_LETTERS = new Set([
   'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa', 'lambda',
   'mu', 'nu', 'xi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega', 'varphi', 'vartheta',
 ]);
+
+const BIG_OPERATORS: Record<string, string> = { int: 'integral', sum: 'sum', prod: 'product' };
 
 const SPACING_COMMANDS = new Set([' ', ',', ':', ';', '!']);
 
@@ -163,6 +167,8 @@ class Tokenizer {
     if (name === 'cdot' || name === 'times' || name === 'ast') return this.push('operator', '*');
     if (name === 'div') return this.push('operator', '/');
     if (name === 'pi') return this.push('constant', 'pi');
+    if (name === 'infty') return this.push('infinity', 'infinity');
+    if (BIG_OPERATORS[name]) return this.push('bigOperator', BIG_OPERATORS[name]);
     if (FUNCTION_COMMANDS.has(name)) return this.push('function', name);
     if (GREEK_LETTERS.has(name)) return this.pushIdentifier(`\\${name}`);
     if (name === 'operatorname') return this.readOperatorName();
@@ -183,6 +189,8 @@ class Tokenizer {
   private readTextConstant(command: string): void {
     const word = this.readBracedWord(command);
     if (word === 'e') return this.push('constant', 'e');
+    // Upright d, as in the differential \mathrm{d}x
+    if (word === 'd') return this.push('identifier', 'd');
     throw new MathError(`"${word}" isn't something this calculator understands.`);
   }
 

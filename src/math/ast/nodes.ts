@@ -4,7 +4,8 @@ import { Rational } from '../number/rational';
 // Subtraction is stored as adding a negative and division as a power of -1,
 // so the simplifier only needs rules for add, multiply and power.
 
-export type FunctionName =
+/** Functions with a FunctionDefinition in operations/functions/registry.ts. */
+export type ElementaryFunctionName =
   | 'sin'
   | 'cos'
   | 'tan'
@@ -19,7 +20,16 @@ export type FunctionName =
   | 'abs'
   | 'factorial';
 
-export type ConstantName = 'pi' | 'e';
+/**
+ * Calculus operators, stored as function calls whose second argument is the variable they
+ * act on (a var node). Argument layouts live in ast/calculus.ts.
+ */
+export type CalculusOperatorName = 'derivative' | 'integral' | 'sum' | 'product';
+
+export type FunctionName = ElementaryFunctionName | CalculusOperatorName;
+
+/** `infinity` only appears as a limit of a sum or integral; the parser rejects it anywhere else. */
+export type ConstantName = 'pi' | 'e' | 'infinity';
 
 export type NumberNode = { type: 'num'; value: Rational };
 export type ConstantNode = { type: 'const'; name: ConstantName };
@@ -27,7 +37,7 @@ export type VariableNode = { type: 'var'; name: string };
 export type SumNode = { type: 'add'; terms: Expr[] };
 export type ProductNode = { type: 'mul'; factors: Expr[] };
 export type PowerNode = { type: 'pow'; base: Expr; exponent: Expr };
-/** `log` takes [argument, base]; every other function takes one argument. */
+/** `log` takes [argument, base]; calculus operators are described in ast/calculus.ts; the rest take one argument. */
 export type FunctionNode = { type: 'func'; name: FunctionName; args: Expr[] };
 
 export type Expr = NumberNode | ConstantNode | VariableNode | SumNode | ProductNode | PowerNode | FunctionNode;

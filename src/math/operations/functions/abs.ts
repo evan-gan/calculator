@@ -1,4 +1,4 @@
-import { func, num } from '../../ast/nodes';
+import { divide, func, mul, num } from '../../ast/nodes';
 import { numericSign } from '../../evaluate/evaluate';
 import { isConstantExpr } from '../../ast/inspect';
 import { negated } from '../arithmetic';
@@ -24,5 +24,7 @@ export const absDefinition: FunctionDefinition = {
     return hasNegativeSign(x) ? func('abs', negated(x)) : null;
   },
   evaluate: ([x]) => Math.abs(x),
+  // |u|' = u/|u| · u' (undefined where u = 0)
+  derivative: ([x], [dx]) => mul(divide(x, func('abs', x)), dx),
 };
 

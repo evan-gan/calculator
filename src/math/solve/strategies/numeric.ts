@@ -1,3 +1,4 @@
+import { containsCalculusOperator } from '../../ast/calculus';
 import type { Expr } from '../../ast/nodes';
 import { evaluate } from '../../evaluate/evaluate';
 import type { Solution, Strategy } from '../types';
@@ -8,6 +9,8 @@ import type { Solution, Strategy } from '../types';
 const SCAN_MIN = -100;
 const SCAN_MAX = 100;
 const SCAN_STEPS = 20_000;
+// Each evaluation of an unevaluated integral or series is itself a numeric computation.
+const CALCULUS_SCAN_STEPS = 400;
 const BISECTION_STEPS = 80;
 // Rejects sign changes caused by poles (like tan x at π/2) rather than real roots.
 const ROOT_TOLERANCE = 1e-6;
@@ -32,10 +35,11 @@ function bisect(f: (x: number) => number, low: number, high: number): number {
 export function findApproximateRoots(expr: Expr, variable: string): number[] {
   const f = (x: number) => evaluate(expr, { [variable]: x });
   const roots: number[] = [];
-  const step = (SCAN_MAX - SCAN_MIN) / SCAN_STEPS;
+  const scanSteps = containsCalculusOperator(expr) ? CALCULUS_SCAN_STEPS : SCAN_STEPS;
+  const step = (SCAN_MAX - SCAN_MIN) / scanSteps;
   let previousX = SCAN_MIN;
   let previousValue = f(previousX);
-  for (let index = 1; index <= SCAN_STEPS && roots.length < MAX_ROOTS; index++) {
+  for (let index = 1; index <= scanSteps && roots.length < MAX_ROOTS; index++) {
     const x = SCAN_MIN + index * step;
     const value = f(x);
     if (Number.isFinite(value) && Number.isFinite(previousValue)) {

@@ -1,5 +1,5 @@
 import { isConstantExpr, toKey } from '../../ast/inspect';
-import { divide, func, mul, negate, num, PI, type Expr, type FunctionName } from '../../ast/nodes';
+import { add, divide, fraction, func, mul, negate, num, PI, pow, type Expr, type FunctionName } from '../../ast/nodes';
 import { MathError } from '../../errors';
 import { evaluate } from '../../evaluate/evaluate';
 import { Rational } from '../../number/rational';
@@ -45,6 +45,11 @@ function piTimes(multiple: Rational): Expr {
   return mul(num(multiple), PI);
 }
 
+/** 1/√(1 - u²), the shared part of the arcsin and arccos derivatives. */
+function inverseSineRate(value: Expr): Expr {
+  return pow(add(num(1), negate(pow(value, num(2)))), fraction(-1, 2));
+}
+
 function assertUnitInterval(name: FunctionName, value: Expr): void {
   if (isConstantExpr(value) && Math.abs(evaluate(value)) > 1 + 1e-12) {
     throw new MathError(`${name} is only defined for inputs between -1 and 1.`);
@@ -62,6 +67,7 @@ export const arcsinDefinition: FunctionDefinition = {
     return hasNegativeSign(value) ? negate(func('arcsin', negated(value))) : null;
   },
   evaluate: ([value]) => Math.asin(value),
+  derivative: ([value], [rate]) => mul(inverseSineRate(value), rate),
 };
 
 export const arccosDefinition: FunctionDefinition = {
@@ -75,6 +81,7 @@ export const arccosDefinition: FunctionDefinition = {
     return angle ? piTimes(Rational.HALF.sub(angle)) : null;
   },
   evaluate: ([value]) => Math.acos(value),
+  derivative: ([value], [rate]) => mul(num(-1), inverseSineRate(value), rate),
 };
 
 export const arctanDefinition: FunctionDefinition = {
@@ -89,4 +96,5 @@ export const arctanDefinition: FunctionDefinition = {
     return isNegative ? negate(func('arctan', negated(value))) : null;
   },
   evaluate: ([value]) => Math.atan(value),
+  derivative: ([value], [rate]) => divide(rate, add(num(1), pow(value, num(2)))),
 };

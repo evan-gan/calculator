@@ -1,4 +1,4 @@
-import type { FunctionName } from '../../ast/nodes';
+import type { ElementaryFunctionName } from '../../ast/nodes';
 import { absDefinition } from './abs';
 import { factorialDefinition } from './factorial';
 import { arccosDefinition, arcsinDefinition, arctanDefinition } from './inverseTrig';
@@ -8,9 +8,9 @@ import type { FunctionDefinition } from './types';
 
 // Built lazily because the function files import the simplifier, which imports this
 // registry; building the table at module load could read those imports before they exist.
-let registry: Record<FunctionName, FunctionDefinition> | null = null;
+let registry: Record<ElementaryFunctionName, FunctionDefinition> | null = null;
 
-function buildRegistry(): Record<FunctionName, FunctionDefinition> {
+function buildRegistry(): Record<ElementaryFunctionName, FunctionDefinition> {
   return {
     sin: sinDefinition,
     cos: cosDefinition,
@@ -28,7 +28,7 @@ function buildRegistry(): Record<FunctionName, FunctionDefinition> {
   };
 }
 
-export function getFunction(name: FunctionName): FunctionDefinition {
+export function getFunction(name: ElementaryFunctionName): FunctionDefinition {
   registry ??= buildRegistry();
   return registry[name];
 }

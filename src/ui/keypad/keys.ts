@@ -41,7 +41,7 @@ export interface KeyGroup {
   slots: KeySlot[];
 }
 
-export type KeypadTabId = 'main' | 'abc' | 'func';
+export type KeypadTabId = 'main' | 'abc' | 'func' | 'calc';
 
 export interface KeypadTab {
   id: KeypadTabId;
@@ -195,4 +195,34 @@ const FUNC_TAB: KeypadTab = {
   ],
 };
 
-export const KEYPAD_TABS: KeypadTab[] = [MAIN_TAB, ABC_TAB, FUNC_TAB];
+// The math engine reads \frac{d}{dx} as a derivative, \int ... dx as an integral (empty limit
+// boxes mean indefinite) and \sum_{n=1}^{...} / \prod as series.
+const CALC_TAB: KeypadTab = {
+  id: 'calc',
+  label: 'calc',
+  groups: [
+    {
+      columns: 3,
+      slots: [
+        write({ numerator: 'd', denominator: 'dx' }, '\\frac{d}{dx}', 'derivative'),
+        write('∫', '\\int', 'integral'),
+        command({ base: '∫', sup: 'b', sub: 'a' }, '\\int', 'definite integral'),
+        command('Σ', '\\sum', 'sum'),
+        command('Π', '\\prod', 'product'),
+        write('∞', '\\infty', 'infinity'),
+        write({ base: 'dx', italic: true }, 'dx', 'd x'),
+        X,
+        write({ base: 'n', italic: true }, 'n', 'n'),
+        OPEN,
+        CLOSE,
+        POWER,
+      ],
+    },
+    {
+      columns: 3,
+      slots: [SQRT, FACTORIAL, E, PI, LEFT, RIGHT, BACKSPACE, withSpan(ENTER, 2)],
+    },
+  ],
+};
+
+export const KEYPAD_TABS: KeypadTab[] = [MAIN_TAB, ABC_TAB, FUNC_TAB, CALC_TAB];

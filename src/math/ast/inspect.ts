@@ -1,4 +1,5 @@
-import type { Expr } from './nodes';
+import { boundVariableOf, isCalculusOperator } from './calculus';
+import type { Expr, FunctionNode } from './nodes';
 
 // Read-only queries over expression trees.
 
@@ -17,25 +18,59 @@ export function children(expr: Expr): Expr[] {
   }
 }
 
+/** A child expression and the variable (if any) that is local inside it. */
+type ScopedChild = { child: Expr; hidden: string | null };
+
+/**
+ * Children as seen by variable lookups. A calculus operator's variable marker is skipped, and
+ * inside a sum or definite integral its variable is local: Σ_{n=1}^{3} n doesn't depend on n.
+ */
+function scopedChildren(expr: Expr): ScopedChild[] {
+  if (expr.type !== 'func' || !isCalculusOperator(expr.name)) return children(expr).map((child) => ({ child, hidden: null }));
+  const bound = boundVariableOf(expr);
+  const [body, marker, ...rest] = expr.args;
+  // A free marker still counts: ∫ 5 dx = 5x depends on x even though the body doesn't.
+  const markerChildren = bound === null ? [{ child: marker, hidden: null }] : [];
+  return [{ child: body, hidden: bound }, ...markerChildren, ...rest.map((child) => ({ child, hidden: null }))];
+}
+
+/** Calls `visit` for each free variable occurrence; stops early once `visit` returns true. */
+function visitFreeVariables(expr: Expr, hidden: Set<string>, visit: (name: string) => boolean | void): boolean {
+  if (expr.type === 'var') return !hidden.has(expr.name) && visit(expr.name) === true;
+  for (const { child, hidden: local } of scopedChildren(expr)) {
+    const hidesNew = local !== null && !hidden.has(local);
+    if (hidesNew) hidden.add(local);
+    const stop = visitFreeVariables(child, hidden, visit);
+    if (hidesNew) hidden.delete(local);
+    if (stop) return true;
+  }
+  return false;
+}
+
+/** True if the expression depends on `name` (or on any variable when no name is given). */
 export function containsVariable(expr: Expr, name?: string): boolean {
-  if (expr.type === 'var') return name === undefined || expr.name === name;
-  return children(expr).some((child) => containsVariable(child, name));
+  if (expr.type === 'num' || expr.type === 'const') return false;
+  return visitFreeVariables(expr, new Set(), (variableName) => name === undefined || variableName === name);
 }
 
 export function isConstantExpr(expr: Expr): boolean {
   return !containsVariable(expr);
 }
 
-/** Variable names in order of first appearance. */
+/** Free variable names in order of first appearance (variables local to a sum or integral are skipped). */
 export function collectVariables(expr: Expr, found: Set<string> = new Set()): string[] {
-  if (expr.type === 'var') found.add(expr.name);
-  for (const child of children(expr)) collectVariables(child, found);
+  visitFreeVariables(expr, new Set(), (name) => {
+    found.add(name);
+  });
   return [...found];
 }
 
 export function countOccurrences(expr: Expr, name: string): number {
-  if (expr.type === 'var') return expr.name === name ? 1 : 0;
-  return children(expr).reduce((total, child) => total + countOccurrences(child, name), 0);
+  let count = 0;
+  visitFreeVariables(expr, new Set(), (variableName) => {
+    if (variableName === name) count++;
+  });
+  return count;
 }
 
 /**
@@ -86,6 +121,40 @@ export function replaceSubtree(expr: Expr, targetKey: string, replacement: Expr)
   }
 }
 
+/**
+ * Replace the free variable `name` with a value. Local variables of sums and definite integrals
+ * are left alone. A derivative in `name` is evaluated at the value instead (d/dx x² at x = 3),
+ * and an indefinite integral in `name` keeps its variable, since plugging a number into it
+ * has no meaning without its constant.
+ */
 export function substituteVariable(expr: Expr, name: string, replacement: Expr): Expr {
-  return replaceSubtree(expr, `$${name}`, replacement);
+  switch (expr.type) {
+    case 'var':
+      return expr.name === name ? replacement : expr;
+    case 'add':
+      return { type: 'add', terms: expr.terms.map((term) => substituteVariable(term, name, replacement)) };
+    case 'mul':
+      return { type: 'mul', factors: expr.factors.map((factor) => substituteVariable(factor, name, replacement)) };
+    case 'pow':
+      return {
+        type: 'pow',
+        base: substituteVariable(expr.base, name, replacement),
+        exponent: substituteVariable(expr.exponent, name, replacement),
+      };
+    case 'func':
+      return substituteInCall(expr, name, replacement);
+    default:
+      return expr;
+  }
+}
+
+function substituteInCall(call: FunctionNode, name: string, replacement: Expr): Expr {
+  const substitute = (arg: Expr) => substituteVariable(arg, name, replacement);
+  if (!isCalculusOperator(call.name)) return { ...call, args: call.args.map(substitute) };
+  const [body, marker, ...rest] = call.args;
+  const operatesOnName = marker.type === 'var' && marker.name === name;
+  if (!operatesOnName) return { ...call, args: [substitute(body), marker, ...rest.map(substitute)] };
+  if (boundVariableOf(call) === name) return { ...call, args: [body, marker, ...rest.map(substitute)] };
+  if (call.name === 'derivative') return { ...call, args: [body, marker, rest[0], replacement] };
+  return call;
 }

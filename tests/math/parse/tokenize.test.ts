@@ -28,6 +28,19 @@ describe('tokenize', () => {
 
   test('inequalities and unknown commands give clear errors', () => {
     expect(() => tokenize('x<2')).toThrow('Inequalities are not supported');
-    expect(() => tokenize('\\int x')).toThrow('isn\'t supported');
+    expect(() => tokenize('\\lim x')).toThrow('isn\'t supported');
+  });
+
+  test('integrals, sums, products and infinity get their own tokens', () => {
+    expect(tokenize('\\int _0^1').slice(0, 1)).toEqual([{ kind: 'bigOperator', value: 'integral' }]);
+    expect(tokenize('\\sum \\prod \\infty').slice(0, 3)).toEqual([
+      { kind: 'bigOperator', value: 'sum' },
+      { kind: 'bigOperator', value: 'product' },
+      { kind: 'infinity', value: 'infinity' },
+    ]);
+    expect(tokenize('\\mathrm{d}x').slice(0, 2)).toEqual([
+      { kind: 'identifier', value: 'd' },
+      { kind: 'identifier', value: 'x' },
+    ]);
   });
 });

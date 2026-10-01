@@ -32,8 +32,11 @@ function replaceConstants(expr: Expr): Expr {
       const coefficientFactors = coefficient.type === 'mul' ? coefficient.factors : [coefficient];
       return { type: 'mul', factors: [...coefficientFactors, ...others] };
     }
-    case 'pow':
-      return { type: 'pow', base: replaceConstants(expr.base), exponent: replaceConstants(expr.exponent) };
+    case 'pow': {
+      // Keep e as a letter in e^x; 2.71828^x reads worse and isn't more precise.
+      const keepsBase = expr.base.type === 'const' && expr.base.name === 'e';
+      return { type: 'pow', base: keepsBase ? expr.base : replaceConstants(expr.base), exponent: replaceConstants(expr.exponent) };
+    }
     case 'func':
       return { ...expr, args: expr.args.map(replaceConstants) };
     default:

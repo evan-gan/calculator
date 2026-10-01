@@ -27,4 +27,7 @@ export const factorialDefinition: FunctionDefinition = {
     for (let factor = 2; factor <= n; factor++) product *= factor;
     return product;
   },
+  derivative: () => {
+    throw new MathError("Factorials can't be differentiated: n! is only defined for whole numbers.");
+  },
 };

@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
+    // Scratch tests live in tests/temp/ (gitignored) and run with `pnpm test:temp`.
+    exclude: ['tests/temp/**', '**/node_modules/**'],
     environment: 'node',
   },
 });

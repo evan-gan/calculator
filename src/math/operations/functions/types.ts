@@ -1,11 +1,11 @@
-import type { Expr, FunctionName } from '../../ast/nodes';
+import type { ElementaryFunctionName, Expr } from '../../ast/nodes';
 
 /**
  * Everything the engine needs to know about one built-in function.
  * To add a function: create a file in this folder exporting a definition, then list it in registry.ts.
  */
 export interface FunctionDefinition {
-  name: FunctionName;
+  name: ElementaryFunctionName;
   /** LaTeX operator used when printing, e.g. '\\sin'. */
   latex: string;
   arity: 1 | 2;
@@ -17,4 +17,9 @@ export interface FunctionDefinition {
   simplify(args: Expr[]): Expr | null;
   /** Float evaluation; return NaN outside the real domain. */
   evaluate(args: number[]): number;
+  /**
+   * Derivative of the call with the chain rule applied, as an unsimplified tree.
+   * `argDerivatives[i]` is the derivative of `args[i]`. Throw MathError if it has none.
+   */
+  derivative(args: Expr[], argDerivatives: Expr[]): Expr;
 }

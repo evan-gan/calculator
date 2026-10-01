@@ -15,12 +15,15 @@ import {
   type FunctionName,
   type Statement,
 } from '../ast/nodes';
+import { derivative, INFINITY, integral, series, type SeriesName } from '../ast/calculus';
 import { MathError } from '../errors';
 import { Rational } from '../number/rational';
 import { tokenize, type Token } from './tokenize';
 
 // Pass 2 of parsing: tokens -> expression tree, by recursive descent.
 // Precedence (low to high): =, + -, explicit/implicit multiplication, unary minus, ^, ! and %
+// d/dx, Σ and Π act on the term that follows them (d/dx x² + 1 = 2x + 1);
+// an integral's body runs up to its differential (∫ x + 1 dx).
 
 const INVERSE_TRIG: Partial<Record<string, FunctionName>> = { sin: 'arcsin', cos: 'arccos', tan: 'arctan' };
 
@@ -30,6 +33,8 @@ class Parser {
   private index = 0;
   // Inside |...| written with bare bars, the next bar closes instead of opening.
   private openBars = 0;
+  // Inside an integral body, "d x" is the differential that ends the body, not d·x.
+  private integralDepth = 0;
 
   constructor(private readonly tokens: Token[]) {}
 
@@ -78,7 +83,17 @@ class Parser {
     throw new MathError(`Expected "${wanted}" but found "${token.value}".`);
   }
 
+  private tokenAt(offset: number): Token {
+    return this.tokens[Math.min(this.index + offset, this.tokens.length - 1)];
+  }
+
+  private isDifferentialAhead(): boolean {
+    const first = this.tokenAt(0);
+    return this.integralDepth > 0 && first.kind === 'identifier' && first.value === 'd' && this.tokenAt(1).kind === 'identifier';
+  }
+
   private startsOperand(token: Token): boolean {
+    if (token === this.peek() && this.isDifferentialAhead()) return false;
     switch (token.kind) {
       case 'number':
       case 'identifier':
@@ -88,6 +103,8 @@ class Parser {
       case 'sqrt':
       case 'open':
       case 'absOpen':
+      case 'bigOperator':
+      case 'infinity':
         return true;
       case 'bar':
         return this.openBars === 0;
@@ -179,7 +196,7 @@ class Parser {
       case 'open':
         return this.parseGroup(token.value);
       case 'frac':
-        return this.parseFraction();
+        return this.parseFractionOrDerivative();
       case 'sqrt':
         return this.parseRoot();
       case 'absOpen':
@@ -188,6 +205,10 @@ class Parser {
         return this.parseAbsolute('bar');
       case 'function':
         return this.parseFunction(token.value);
+      case 'bigOperator':
+        return token.value === 'integral' ? this.parseIntegral() : this.parseSeries(token.value as SeriesName);
+      case 'infinity':
+        throw new MathError('∞ can only be used as a limit of a sum or an integral.');
       case 'end':
         throw new MathError('The expression ends too early. Something is missing at the end.');
       default:
@@ -278,6 +299,117 @@ class Parser {
     while (this.startsOperand(this.peek()) && this.peek().kind !== 'function') factors.push(this.parsePower());
     return factors.length === 1 ? factors[0] : mul(...factors);
   }
+
+  // ---- calculus ----
+
+  /** \frac{d}{dx} (or \frac{d^{2}}{dx^{2}}) is a derivative operator; any other \frac is a fraction. */
+  private parseFractionOrDerivative(): Expr {
+    const operator = matchDerivativeOperator(this.tokens, this.index);
+    if (!operator) return this.parseFraction();
+    this.index = operator.end;
+    const body = this.parseOperatorBody(`d/d${operator.variable}`, `d/d${operator.variable}(${operator.variable}^2)`);
+    return derivative(body, operator.variable, operator.order);
+  }
+
+  /** The term an operator acts on: d/dx x² sin x, or Σ (n+1). */
+  private parseOperatorBody(operatorName: string, example: string): Expr {
+    if (!this.startsOperand(this.peek()) && !this.isOperator('-')) {
+      throw new MathError(`${operatorName} needs something to act on, like ${example}.`);
+    }
+    return this.parseTerm();
+  }
+
+  private parseIntegral(): Expr {
+    const limits = this.parseLimits('integral');
+    this.integralDepth++;
+    // ∫ dx on its own integrates 1.
+    const body = this.isDifferentialAhead() ? num(1) : this.parseExpression();
+    this.integralDepth--;
+    const variableName = this.parseDifferential();
+    const { lower, upper } = limits;
+    if (!lower !== !upper) throw new MathError('A definite integral needs both a lower and an upper limit.');
+    return integral(body, variableName, lower && upper ? { lower, upper } : null);
+  }
+
+  private parseDifferential(): string {
+    const [d, variableToken] = [this.tokenAt(0), this.tokenAt(1)];
+    if (d.kind !== 'identifier' || d.value !== 'd' || variableToken.kind !== 'identifier') {
+      throw new MathError('An integral must end with the variable it integrates over, like ∫ x² dx.');
+    }
+    this.index += 2;
+    return variableToken.value;
+  }
+
+  private parseSeries(name: SeriesName): Expr {
+    const symbol = name === 'sum' ? 'Σ' : 'Π';
+    const { lower, upper, indexName } = this.parseLimits(name);
+    if (!lower || !upper || !indexName) {
+      throw new MathError(`${symbol} needs a start and an end, like ${symbol} from n=1 to 10.`);
+    }
+    const body = this.parseOperatorBody(symbol, `${symbol}_{n=1}^{10} n`);
+    return series(name, body, indexName, lower, upper);
+  }
+
+  /** _{lower} and ^{upper} in either order; a sum's lower limit is written n=1. Empty boxes give null. */
+  private parseLimits(operator: string): { lower: Expr | null; upper: Expr | null; indexName: string | null } {
+    const limits: { lower: Expr | null; upper: Expr | null; indexName: string | null } = { lower: null, upper: null, indexName: null };
+    while (this.isOperator('_') || this.isOperator('^')) {
+      const isLower = this.advance().value === '_';
+      if (isLower && operator !== 'integral') {
+        this.expectOpenBrace(`Write where the ${operator} starts like n=1.`);
+        limits.indexName = this.parseIndexName(operator);
+        limits.lower = this.parseLimitValue();
+        this.expectClose('{');
+      } else if (isLower) {
+        limits.lower = this.parseLimitArgument();
+      } else {
+        limits.upper = this.parseLimitArgument();
+      }
+    }
+    return limits;
+  }
+
+  private expectOpenBrace(message: string): void {
+    const token = this.advance();
+    if (token.kind !== 'open' || token.value !== '{') throw new MathError(message);
+  }
+
+  private parseIndexName(operator: string): string {
+    const name = this.advance();
+    const equals = this.advance();
+    if (name.kind !== 'identifier' || equals.kind !== 'operator' || equals.value !== '=') {
+      throw new MathError(`Write where the ${operator} starts with a variable, like n=1.`);
+    }
+    return name.value;
+  }
+
+  /** A limit after _ or ^: a braced group (possibly empty) or a single character. */
+  private parseLimitArgument(): Expr | null {
+    const token = this.peek();
+    if (token.kind === 'infinity') {
+      this.advance();
+      return INFINITY;
+    }
+    if (token.kind !== 'open' || token.value !== '{') return this.parseAtom();
+    this.advance();
+    if (this.peek().kind === 'close') {
+      this.advance();
+      return null;
+    }
+    const value = this.parseLimitValue();
+    this.expectClose('{');
+    return value;
+  }
+
+  /** An ordinary expression, or ∞ / -∞ standing on its own. */
+  private parseLimitValue(): Expr {
+    if (this.peek().kind === 'close') throw new MathError('A limit box is empty. Fill it in.');
+    const isNegative = this.isOperator('-') && this.tokenAt(1).kind === 'infinity';
+    if (this.peek().kind !== 'infinity' && !isNegative) return this.parseExpression();
+    this.index += isNegative ? 2 : 1;
+    if (this.peek().kind !== 'close') throw new MathError('∞ has to stand on its own as a limit, like ∞ or -∞.');
+    return isNegative ? negate(INFINITY) : INFINITY;
+  }
 }
 
 /** Matches the raw tree the parser builds for "-1": mul(-1, 1). */
@@ -286,6 +418,43 @@ function isMinusOne(expr: Expr): boolean {
   if (expr.type !== 'mul' || expr.factors.length !== 2) return false;
   const [sign, magnitude] = expr.factors;
   return sign.type === 'num' && sign.value.equals(Rational.MINUS_ONE) && magnitude.type === 'num' && magnitude.value.isOne();
+}
+
+/** Reads an optional ^2 or ^{2} after a d. Returns the order and where reading stopped. */
+function readOrder(tokens: Token[], start: number): { order: number; end: number } {
+  if (tokens[start]?.kind !== 'operator' || tokens[start].value !== '^') return { order: 1, end: start };
+  const braced = tokens[start + 1]?.kind === 'open' && tokens[start + 1].value === '{';
+  const digits = tokens[braced ? start + 2 : start + 1];
+  if (digits?.kind !== 'number' || !/^\d+$/.test(digits.value)) return { order: 0, end: start };
+  if (braced && tokens[start + 3]?.kind !== 'close') return { order: 0, end: start };
+  return { order: Number(digits.value), end: start + (braced ? 4 : 2) };
+}
+
+const isToken = (token: Token | undefined, kind: Token['kind'], value?: string) =>
+  token !== undefined && token.kind === kind && (value === undefined || token.value === value);
+
+// Higher orders than this are almost certainly typos and would only make huge expressions.
+const MAX_DERIVATIVE_ORDER = 20;
+
+/**
+ * Match the tokens of {d}{dx} or {d^2}{dx^2} right after \frac.
+ * Returns the variable, order and index just past the operator, or null for an ordinary fraction.
+ */
+function matchDerivativeOperator(tokens: Token[], start: number): { variable: string; order: number; end: number } | null {
+  if (!isToken(tokens[start], 'open', '{') || !isToken(tokens[start + 1], 'identifier', 'd')) return null;
+  const top = readOrder(tokens, start + 2);
+  if (!isToken(tokens[top.end], 'close')) return null;
+  const bottomStart = top.end + 1;
+  if (!isToken(tokens[bottomStart], 'open', '{') || !isToken(tokens[bottomStart + 1], 'identifier', 'd')) return null;
+  const variableToken = tokens[bottomStart + 2];
+  if (!isToken(variableToken, 'identifier')) return null;
+  const bottom = readOrder(tokens, bottomStart + 3);
+  if (!isToken(tokens[bottom.end], 'close')) return null;
+  if (top.order !== bottom.order || top.order < 1) {
+    throw new MathError('A derivative needs matching orders on top and bottom, like d²/dx².');
+  }
+  if (top.order > MAX_DERIVATIVE_ORDER) throw new MathError(`Derivatives above order ${MAX_DERIVATIVE_ORDER} aren't supported.`);
+  return { variable: variableToken.value, order: top.order, end: bottom.end + 1 };
 }
 
 /** Parse one line of MathQuill LaTeX into an expression or an equation. */

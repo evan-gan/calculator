@@ -1,5 +1,5 @@
 import { isConstantExpr, toKey } from '../../ast/inspect';
-import { E, num, type Expr } from '../../ast/nodes';
+import { divide, E, func, mul, num, pow, subtract, type Expr } from '../../ast/nodes';
 import { MathError } from '../../errors';
 import { numericSign } from '../../evaluate/evaluate';
 import { factorize } from '../../number/integer';
@@ -88,6 +88,7 @@ export const lnDefinition: FunctionDefinition = {
   arity: 1,
   simplify: ([argument]) => exactLogarithm(argument, E),
   evaluate: ([argument]) => (argument > 0 ? Math.log(argument) : NaN),
+  derivative: ([argument], [rate]) => divide(rate, argument),
 };
 
 export const logDefinition: FunctionDefinition = {
@@ -96,4 +97,10 @@ export const logDefinition: FunctionDefinition = {
   arity: 2,
   simplify: ([argument, base]) => exactLogarithm(argument, base),
   evaluate: ([argument, base]) => (argument > 0 && base > 0 && base !== 1 ? Math.log(argument) / Math.log(base) : NaN),
+  // log_b(u) = ln u / ln b, by the quotient rule; with a constant base this simplifies to u'/(u ln b).
+  derivative: ([argument, base], [argumentRate, baseRate]) => {
+    const lnBase = func('ln', base);
+    const top = subtract(mul(divide(argumentRate, argument), lnBase), mul(func('ln', argument), divide(baseRate, base)));
+    return divide(top, pow(lnBase, num(2)));
+  },
 };

@@ -1,4 +1,6 @@
+import { isCalculusOperator } from '../ast/calculus';
 import { isConstantExpr } from '../ast/inspect';
+import { evaluateCalculus } from '../calculus/evaluateCalculus';
 import type { Expr } from '../ast/nodes';
 import { MathError } from '../errors';
 import type { Rational } from '../number/rational';
@@ -18,7 +20,7 @@ export function evaluate(expr: Expr, values: VariableValues = {}): number {
     case 'num':
       return expr.value.toNumber();
     case 'const':
-      return expr.name === 'pi' ? Math.PI : Math.E;
+      return expr.name === 'pi' ? Math.PI : expr.name === 'e' ? Math.E : Infinity;
     case 'var':
       return values[expr.name] ?? NaN;
     case 'add':
@@ -28,6 +30,7 @@ export function evaluate(expr: Expr, values: VariableValues = {}): number {
     case 'pow':
       return evaluatePower(expr.base, expr.exponent, values);
     case 'func':
+      if (isCalculusOperator(expr.name)) return evaluateCalculus(expr, values);
       return getFunction(expr.name).evaluate(expr.args.map((arg) => evaluate(arg, values)));
   }
 }

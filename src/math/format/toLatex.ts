@@ -1,15 +1,21 @@
+import { isCalculusOperator } from '../ast/calculus';
 import { containsVariable, toKey } from '../ast/inspect';
-import { num, type Expr, type FunctionNode, type PowerNode, type ProductNode, type SumNode } from '../ast/nodes';
+import { num, type ElementaryFunctionName, type Expr, type FunctionName, type FunctionNode, type PowerNode, type ProductNode, type SumNode } from '../ast/nodes';
 import { lcmBig } from '../number/integer';
 import type { Rational } from '../number/rational';
 import { negated, powerOf, productOf } from '../operations/arithmetic';
 import { splitCoefficient } from '../operations/add';
 import { getFunction } from '../operations/functions/registry';
 import { hasNegativeSign } from '../operations/sign';
+import { calculusToLatex } from './calculusToLatex';
 
 // Prints simplified expression trees as LaTeX for MathQuill's static renderer.
 
-const TRIG_NAMES = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot']);
+const TRIG_NAMES = new Set<FunctionName>(['sin', 'cos', 'tan', 'sec', 'csc', 'cot']);
+
+function isTrigName(name: FunctionName): name is ElementaryFunctionName {
+  return TRIG_NAMES.has(name);
+}
 
 export function rationalToLatex(value: Rational): string {
   if (value.isInteger()) return value.numerator.toString();
@@ -22,7 +28,7 @@ export function toLatex(expr: Expr): string {
     case 'num':
       return rationalToLatex(expr.value);
     case 'const':
-      return expr.name === 'pi' ? '\\pi' : 'e';
+      return expr.name === 'pi' ? '\\pi' : expr.name === 'e' ? 'e' : '\\infty';
     case 'var':
       return expr.name;
     case 'add':
@@ -110,8 +116,12 @@ function sumToLatex(sum: SumNode): string {
   return `\\frac{${joinTerms(scaled)}}{${toLatex(denominator)}}`;
 }
 
+function isCalculusCall(expr: Expr): boolean {
+  return expr.type === 'func' && isCalculusOperator(expr.name);
+}
+
 function factorToLatex(factor: Expr): string {
-  return factor.type === 'add' ? wrapInParens(toLatex(factor)) : toLatex(factor);
+  return factor.type === 'add' || isCalculusCall(factor) ? wrapInParens(toLatex(factor)) : toLatex(factor);
 }
 
 /** Juxtapose factors, using \cdot only where two numbers would otherwise run together (2·3^x). */
@@ -152,7 +162,8 @@ function productToLatex(product: ProductNode): string {
 
 function needsParensAsBase(base: Expr): boolean {
   if (base.type === 'num') return base.value.isNegative() || !base.value.isInteger();
-  return base.type === 'add' || base.type === 'mul' || base.type === 'pow' || (base.type === 'func' && base.name === 'factorial');
+  if (base.type === 'func') return base.name === 'factorial' || isCalculusOperator(base.name);
+  return base.type === 'add' || base.type === 'mul' || base.type === 'pow';
 }
 
 function powerToLatex(power: PowerNode): string {
@@ -161,7 +172,7 @@ function powerToLatex(power: PowerNode): string {
     const value = exponent.value;
     if (value.isNegative()) return `\\frac{1}{${toLatex(powerOf(base, num(value.neg())))}}`;
     if (!value.isInteger()) return rootToLatex(base, value);
-    if (base.type === 'func' && TRIG_NAMES.has(base.name)) {
+    if (base.type === 'func' && isTrigName(base.name)) {
       return `${getFunction(base.name).latex}^{${value.numerator}}${wrapInParens(toLatex(base.args[0]))}`;
     }
   }
@@ -178,6 +189,7 @@ function rootToLatex(base: Expr, exponent: Rational): string {
 }
 
 function functionToLatex(call: FunctionNode): string {
+  if (isCalculusOperator(call.name)) return calculusToLatex(call);
   const [argument, secondArgument] = call.args;
   switch (call.name) {
     case 'abs':
@@ -191,6 +203,10 @@ function functionToLatex(call: FunctionNode): string {
       const base = isCommonLog ? '' : `_{${toLatex(secondArgument)}}`;
       return `\\log${base}${wrapInParens(toLatex(argument))}`;
     }
+    case 'ln':
+      // ln|x| rather than ln(|x|)
+      if (argument.type === 'func' && argument.name === 'abs') return `\\ln${toLatex(argument)}`;
+      return `\\ln${wrapInParens(toLatex(argument))}`;
     default:
       return `${getFunction(call.name).latex}${wrapInParens(toLatex(argument))}`;
   }

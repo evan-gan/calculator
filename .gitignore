@@ -1,3 +1,6 @@
 node_modules
 dist
 .DS_Store
+
+# Throwaway exploration tests (run with pnpm test:temp)
+tests/temp/

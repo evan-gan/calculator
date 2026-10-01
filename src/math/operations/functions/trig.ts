@@ -1,4 +1,4 @@
-import { divide, func, negate, num, type Expr, type FunctionName } from '../../ast/nodes';
+import { divide, func, mul, negate, num, pow, type Expr, type FunctionName } from '../../ast/nodes';
 import { MathError } from '../../errors';
 import type { Rational } from '../../number/rational';
 import { negated } from '../arithmetic';
@@ -52,6 +52,7 @@ export const sinDefinition: FunctionDefinition = {
     return undoInverse(x, 'arcsin') ?? applySymmetry('sin', x, true);
   },
   evaluate: ([x]) => Math.sin(x),
+  derivative: ([x], [dx]) => mul(func('cos', x), dx),
 };
 
 export const cosDefinition: FunctionDefinition = {
@@ -64,6 +65,7 @@ export const cosDefinition: FunctionDefinition = {
     return undoInverse(x, 'arccos') ?? applySymmetry('cos', x, false);
   },
   evaluate: ([x]) => Math.cos(x),
+  derivative: ([x], [dx]) => mul(num(-1), func('sin', x), dx),
 };
 
 export const tanDefinition: FunctionDefinition = {
@@ -75,6 +77,7 @@ export const tanDefinition: FunctionDefinition = {
     undoInverse(x, 'arctan') ??
     applySymmetry('tan', x, true),
   evaluate: ([x]) => Math.tan(x),
+  derivative: ([x], [dx]) => mul(pow(func('sec', x), num(2)), dx),
 };
 
 export const secDefinition: FunctionDefinition = {
@@ -84,6 +87,7 @@ export const secDefinition: FunctionDefinition = {
   simplify: ([x]) =>
     exactRatio('sec', x, { numerator: ONE_RATIO, denominator: exactCosine }) ?? applySymmetry('sec', x, false),
   evaluate: ([x]) => 1 / Math.cos(x),
+  derivative: ([x], [dx]) => mul(func('sec', x), func('tan', x), dx),
 };
 
 export const cscDefinition: FunctionDefinition = {
@@ -93,6 +97,7 @@ export const cscDefinition: FunctionDefinition = {
   simplify: ([x]) =>
     exactRatio('csc', x, { numerator: ONE_RATIO, denominator: exactSine }) ?? applySymmetry('csc', x, true),
   evaluate: ([x]) => 1 / Math.sin(x),
+  derivative: ([x], [dx]) => mul(num(-1), func('csc', x), func('cot', x), dx),
 };
 
 export const cotDefinition: FunctionDefinition = {
@@ -102,4 +107,5 @@ export const cotDefinition: FunctionDefinition = {
   simplify: ([x]) =>
     exactRatio('cot', x, { numerator: exactCosine, denominator: exactSine }) ?? applySymmetry('cot', x, true),
   evaluate: ([x]) => Math.cos(x) / Math.sin(x),
+  derivative: ([x], [dx]) => mul(num(-1), pow(func('csc', x), num(2)), dx),
 };

@@ -1,3 +1,4 @@
+import { containsCalculusOperator } from '../ast/calculus';
 import { containsVariable } from '../ast/inspect';
 import { num, type Expr } from '../ast/nodes';
 import { evaluate } from '../evaluate/evaluate';
@@ -134,5 +135,10 @@ export function formatSolveOutcome(outcome: SolveOutcome): SolutionDisplay {
 
 /** Display for a definition line such as y = 2x + 1 (its value, which may contain free variables). */
 export function formatDefinition(variable: string, value: Expr): SolutionDisplay {
+  // An integral or series with no exact value would only be restated, so show its approximation.
+  if (containsCalculusOperator(value) && !containsVariable(value)) {
+    const line = `${variable}\\approx ${floatToLatex(evaluate(value))}`;
+    return { exactLines: [line], decimalLines: [line], notes: [] };
+  }
   return formatSolutionList(variable, [{ kind: 'exact', value }]);
 }
