@@ -19,6 +19,6 @@ describe('exact inverse trig values', () => {
   });
 
   test('values not in the table stay symbolic', () => {
-    expect(simplifyLatex('\\arcsin\\left(\\frac{1}{3}\\right)')).toBe('\\arcsin\\left(\\frac{1}{3}\\right)');
+    expect(simplifyLatex('\\arcsin\\left(\\frac{1}{3}\\right)')).toBe('\\sin^{-1}\\left(\\frac{1}{3}\\right)');
   });
 });

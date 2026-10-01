@@ -58,7 +58,7 @@ function assertUnitInterval(name: FunctionName, value: Expr): void {
 
 export const arcsinDefinition: FunctionDefinition = {
   name: 'arcsin',
-  latex: '\\arcsin',
+  latex: '\\sin^{-1}',
   arity: 1,
   simplify: ([value]) => {
     assertUnitInterval('arcsin', value);
@@ -72,7 +72,7 @@ export const arcsinDefinition: FunctionDefinition = {
 
 export const arccosDefinition: FunctionDefinition = {
   name: 'arccos',
-  latex: '\\arccos',
+  latex: '\\cos^{-1}',
   arity: 1,
   simplify: ([value]) => {
     assertUnitInterval('arccos', value);
@@ -86,7 +86,7 @@ export const arccosDefinition: FunctionDefinition = {
 
 export const arctanDefinition: FunctionDefinition = {
   name: 'arctan',
-  latex: '\\arctan',
+  latex: '\\tan^{-1}',
   arity: 1,
   simplify: ([value]) => {
     tangentLookup ??= buildLookup(tangentAt, false);

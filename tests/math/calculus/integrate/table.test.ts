@@ -22,7 +22,7 @@ describe('standard integrals (linear arguments)', () => {
   });
 
   test('inverse square roots give arcsin and logarithms', () => {
-    expect(simplifyLatex('\\int \\frac{1}{\\sqrt{1-x^{2}}}dx')).toBe('\\arcsin\\left(x\\right)');
+    expect(simplifyLatex('\\int \\frac{1}{\\sqrt{1-x^{2}}}dx')).toBe('\\sin^{-1}\\left(x\\right)');
     expect(simplifyLatex('\\int \\frac{1}{\\sqrt{x^{2}+4}}dx')).toBe('\\ln\\left|x+\\sqrt{x^{2}+4}\\right|');
   });
 

@@ -9,6 +9,6 @@ describe('integration by parts', () => {
 
   test('logarithms and inverse trig are differentiated instead', () => {
     expect(simplifyLatex('\\int x\\ln x\\,dx')).toBe('\\frac{x^{2} \\ln\\left(x\\right)}{2}-\\frac{x^{2}}{4}');
-    expect(simplifyLatex('\\int \\arctan x\\,dx')).toBe('x \\arctan\\left(x\\right)-\\frac{\\ln\\left(x^{2}+1\\right)}{2}');
+    expect(simplifyLatex('\\int \\arctan x\\,dx')).toBe('x \\tan^{-1}\\left(x\\right)-\\frac{\\ln\\left(x^{2}+1\\right)}{2}');
   });
 });

@@ -133,6 +133,7 @@ Calculus operators are `func` nodes named `derivative` / `integral` / `sum` / `p
 
 ## Behaviour notes / limits
 - Angles default to radians; DEG switches trig input/output to degrees (solutions get period 360).
+- Inverse trig is typed as arcsin/arccos/arctan (or sin⁻¹) but printed as sin⁻¹/cos⁻¹/tan⁻¹ (`latex` in `inverseTrig.ts`; powers of them get parentheses in `toLatex.ts`).
 - Real numbers only: even roots of negatives are errors; quadratics with Δ < 0 report "No real solution".
 - `e` is always Euler's number; single letters are variables; `x_{1}` and greek letters are variables too.
 - An expression with exactly one variable also shows where it equals 0.

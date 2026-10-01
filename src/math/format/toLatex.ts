@@ -13,6 +13,13 @@ import { calculusToLatex } from './calculusToLatex';
 
 const TRIG_NAMES = new Set<FunctionName>(['sin', 'cos', 'tan', 'sec', 'csc', 'cot']);
 
+const INVERSE_TRIG_NAMES = new Set<FunctionName>(['arcsin', 'arccos', 'arctan']);
+
+// Printed as sin⁻¹(x), so a power of one needs parentheses to not read as a reciprocal
+function isInverseTrigName(name: FunctionName): boolean {
+  return INVERSE_TRIG_NAMES.has(name);
+}
+
 function isTrigName(name: FunctionName): name is ElementaryFunctionName {
   return TRIG_NAMES.has(name);
 }
@@ -162,7 +169,7 @@ function productToLatex(product: ProductNode): string {
 
 function needsParensAsBase(base: Expr): boolean {
   if (base.type === 'num') return base.value.isNegative() || !base.value.isInteger();
-  if (base.type === 'func') return base.name === 'factorial' || isCalculusOperator(base.name);
+  if (base.type === 'func') return base.name === 'factorial' || isCalculusOperator(base.name) || isInverseTrigName(base.name);
   return base.type === 'add' || base.type === 'mul' || base.type === 'pow';
 }
 
