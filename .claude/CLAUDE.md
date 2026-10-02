@@ -56,7 +56,7 @@ Calculus operators are `func` nodes named `derivative` / `integral` / `sum` / `p
 - `mathquill/config.ts` — MathField typing options (auto commands `sqrt pi theta nthroot sum prod int infty to` — `to` types →; operator names incl. `lim`; Σ starts with `n=`). Any operator name added here must be understood by `src/math/parse/tokenize.ts`.
 - `mathquill/types.ts`, `mathquill/mathquill.d.ts` — minimal typings for MathQuill.
 - `keypad/keys.ts` — **keypad layout as data**: `KEYPAD_TABS` (main / abc / func / calc — d/dx, ∫, ∫ₐᵇ, Σ, Π, lim (types `lim_xto`, cursor at the point), ∞, →, dx, x, n, h), each made of grid `KeyGroup`s with key `span`s and spacers; `KeyLabel` (text, scripts, fraction); `KeyAction` (write/cmd/typed/keystroke/ans/shift/submit). Add or move keys here.
-- `components/MathField.svelte` — editable MathQuill input; bindable `latex`; Enter / backspace-at-start / up / down callbacks; `applyAction()` / `focus()` (focus works even before MathQuill has loaded).
+- `components/MathField.svelte` — editable MathQuill input; bindable `latex`; Enter / backspace-at-start / up / down callbacks; `applyAction()` / `focus()` (focus works even before MathQuill has loaded). Sets `inputmode="none"` on MathQuill's hidden textarea so phones don't open the system keyboard (paste/long-press still work).
 - `components/ExpressionRow.svelte` — one editable line: MathField, live result on the right, delete button. Enter adds a line below, backspace on an empty line deletes it, ↑/↓ move between lines.
 - `components/ResultView.svelte` — renders any `CalculationResult` (value, simplified + roots, solved, truth, error), right-aligned.
 - `components/SolutionLines.svelte` — solution lines + notes for the chosen mode.

@@ -25,6 +25,17 @@
   // focus() can be called before MathQuill finishes loading (e.g. a just-added line).
   let focusWhenReady = false;
 
+  /**
+   * The app has its own keypad, so stop phones from popping up the system keyboard.
+   * inputmode="none" only hides the virtual keyboard; the textarea stays focusable, so
+   * the caret, long-press paste/select and hardware keyboards keep working
+   * (unlike readonly, which would break paste).
+   */
+  function suppressOnScreenKeyboard(editorHost: HTMLElement): void {
+    const hiddenTextarea = editorHost.querySelector('textarea');
+    hiddenTextarea?.setAttribute('inputmode', 'none');
+  }
+
   onMount(() => {
     let destroyed = false;
     loadMathQuill()
@@ -42,6 +53,7 @@
             downOutOf: () => onDownOutOf?.(),
           },
         });
+        suppressOnScreenKeyboard(host);
         created.latex(latex);
         if (focusWhenReady) created.focus();
         field = created;
