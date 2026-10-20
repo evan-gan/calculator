@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import type { CalculationResult } from '../../../src/math';
 import { previousAnswer } from '../../../src/ui/state/previousAnswer';
 
-const value = (exact: string): CalculationResult => ({ kind: 'value', result: { exact, decimal: exact } });
+const value = (exact: string): CalculationResult => ({ kind: 'value', result: { exact, decimal: exact, scientific: exact } });
 
 describe('previousAnswer: what the ans key inserts', () => {
   test('the nearest numeric line above, without its "="', () => {

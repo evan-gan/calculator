@@ -8,24 +8,31 @@ import type { Rational } from '../number/rational';
 
 export const SIGNIFICANT_DIGITS = 12;
 
+/** 'decimal' switches to a×10ⁿ only for very large/small numbers; 'scientific' always does. */
+export type NumberNotation = 'decimal' | 'scientific';
+
 // Float noise like 1.2e-16 from sin(π)-style evaluation should read as 0.
 const FLOAT_NOISE = 1e-13;
 
-/** "1.5e+21" -> "1.5\times10^{21}"; trims trailing zeros. */
+/** "1.5e+21" -> "1.5\times10^{21}". Keeps ×10⁰ so scientific answers all share one shape. */
 function scientificToLatex(mantissa: string, exponent: number): string {
-  return exponent === 0 ? mantissa : `${mantissa}\\times10^{${exponent}}`;
+  return `${mantissa}\\times10^{${exponent}}`;
+}
+
+function usesScientific(exponent: number, notation: NumberNotation): boolean {
+  return notation === 'scientific' || exponent >= SIGNIFICANT_DIGITS || exponent < -6;
 }
 
 function trimZeros(text: string): string {
   return text.includes('.') ? text.replace(/\.?0+$/, '') : text;
 }
 
-export function floatToLatex(value: number): string {
+export function floatToLatex(value: number, notation: NumberNotation = 'decimal'): string {
   if (Number.isNaN(value)) return '\\text{undefined}';
   if (!Number.isFinite(value)) return value > 0 ? '\\infty' : '-\\infty';
   if (Math.abs(value) < FLOAT_NOISE) return '0';
   const magnitude = Math.floor(Math.log10(Math.abs(value)));
-  if (magnitude >= SIGNIFICANT_DIGITS || magnitude < -6) {
+  if (usesScientific(magnitude, notation)) {
     const [mantissa, exponent] = value.toExponential(SIGNIFICANT_DIGITS - 1).split('e');
     return scientificToLatex(trimZeros(mantissa), Number(exponent));
   }
@@ -33,7 +40,7 @@ export function floatToLatex(value: number): string {
 }
 
 /** Exact decimal digits of a rational, rounded to SIGNIFICANT_DIGITS. */
-export function rationalToDecimalLatex(value: Rational): string {
+export function rationalToDecimalLatex(value: Rational, notation: NumberNotation = 'decimal'): string {
   if (value.isZero()) return '0';
   const sign = value.isNegative() ? '-' : '';
   const numerator = absBig(value.numerator);
@@ -53,7 +60,7 @@ export function rationalToDecimalLatex(value: Rational): string {
     exponent++;
   }
   const digitText = digits.toString();
-  if (exponent >= SIGNIFICANT_DIGITS || exponent < -6) {
+  if (usesScientific(exponent, notation)) {
     const mantissa = trimZeros(`${digitText[0]}.${digitText.slice(1)}`);
     return sign + scientificToLatex(mantissa, exponent);
   }
@@ -66,6 +73,6 @@ export function rationalToDecimalLatex(value: Rational): string {
   return sign + trimZeros(plain);
 }
 
-export function exprToDecimalLatex(expr: Expr): string {
-  return expr.type === 'num' ? rationalToDecimalLatex(expr.value) : floatToLatex(evaluate(expr));
+export function exprToDecimalLatex(expr: Expr, notation: NumberNotation = 'decimal'): string {
+  return expr.type === 'num' ? rationalToDecimalLatex(expr.value, notation) : floatToLatex(evaluate(expr), notation);
 }

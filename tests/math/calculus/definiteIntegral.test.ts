@@ -35,7 +35,7 @@ describe('definite integrals', () => {
   test('without an antiderivative the value is approximate in both modes', () => {
     expect(calculate('\\int _0^1e^{x^{2}}dx')).toEqual({
       kind: 'value',
-      result: { exact: '\\approx 1.46265174591', decimal: '\\approx 1.46265174591' },
+      result: { exact: '\\approx 1.46265174591', decimal: '\\approx 1.46265174591', scientific: '\\approx 1.46265174591\\times10^{0}' },
     });
   });
 

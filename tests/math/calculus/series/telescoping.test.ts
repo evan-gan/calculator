@@ -4,7 +4,7 @@ import { simplifyLatex } from '../../../helpers';
 
 describe('telescoping sums of rational functions', () => {
   test('Σ 1/(n(n+1)) is exactly 1, not ≈ 1', () => {
-    expect(calculate('\\sum_{n=1}^{\\infty}\\frac{1}{n\\left(n+1\\right)}')).toEqual({ kind: 'value', result: { exact: '=1', decimal: '=1' } });
+    expect(calculate('\\sum_{n=1}^{\\infty}\\frac{1}{n\\left(n+1\\right)}')).toEqual({ kind: 'value', result: { exact: '=1', decimal: '=1', scientific: '=1\\times10^{0}' } });
   });
 
   test('finite sums with a symbolic or large upper limit', () => {

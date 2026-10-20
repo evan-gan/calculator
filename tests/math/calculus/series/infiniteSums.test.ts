@@ -30,7 +30,7 @@ describe('infinite sums', () => {
   test('convergent series without a formula are shown approximately', () => {
     expect(calculate('\\sum _{n=1}^{\\infty}\\frac{1}{n^{3}}')).toEqual({
       kind: 'value',
-      result: { exact: '\\approx 1.20205690316', decimal: '\\approx 1.20205690316' },
+      result: { exact: '\\approx 1.20205690316', decimal: '\\approx 1.20205690316', scientific: '\\approx 1.20205690316\\times10^{0}' },
     });
     expect(calculate('\\sum _{n=1}^{\\infty}\\frac{\\left(-1\\right)^{n+1}}{n}')).toMatchObject({ result: { decimal: '\\approx 0.69314718056' } });
   });

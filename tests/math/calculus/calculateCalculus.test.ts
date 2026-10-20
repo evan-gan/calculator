@@ -5,7 +5,7 @@ describe('calculus results on screen', () => {
   test('indefinite integrals end in + C and show no roots', () => {
     expect(calculate('\\int x^{2}dx')).toEqual({
       kind: 'simplified',
-      result: { exact: '=\\frac{x^{3}}{3}+C', decimal: '=0.333333333333 x^{3}+C' },
+      result: { exact: '=\\frac{x^{3}}{3}+C', decimal: '=0.333333333333 x^{3}+C', scientific: '=3.33333333333\\times10^{-1} x^{3}+C' },
       roots: null,
       variable: null,
     });
@@ -21,11 +21,11 @@ describe('calculus results on screen', () => {
   });
 
   test('equations can contain derivatives', () => {
-    expect(calculate('\\frac{d}{dx}x^{3}=12')).toEqual({ kind: 'solved', solutions: { exactLines: ['x=\\pm 2'], decimalLines: ['x=-2,\\ 2'], notes: [] } });
+    expect(calculate('\\frac{d}{dx}x^{3}=12')).toEqual({ kind: 'solved', solutions: { exactLines: ['x=\\pm 2'], decimalLines: ['x=-2,\\ 2'], scientificLines: ['x=-2\\times10^{0},\\ 2\\times10^{0}'], notes: [] } });
   });
 
   test('exact definite values', () => {
-    expect(calculate('\\int _0^1x^{2}dx')).toEqual({ kind: 'value', result: { exact: '=\\frac{1}{3}', decimal: '\\approx 0.333333333333' } });
+    expect(calculate('\\int _0^1x^{2}dx')).toEqual({ kind: 'value', result: { exact: '=\\frac{1}{3}', decimal: '\\approx 0.333333333333', scientific: '\\approx 3.33333333333\\times10^{-1}' } });
   });
 
   test('decimal mode keeps e as a letter in powers', () => {

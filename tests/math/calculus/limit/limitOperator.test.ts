@@ -4,12 +4,12 @@ import { simplifyLatex } from '../../../helpers';
 
 describe('lim on screen', () => {
   test('exact values in both display modes', () => {
-    expect(calculate('\\lim_{x\\to0}\\frac{\\sin x}{x}')).toEqual({ kind: 'value', result: { exact: '=1', decimal: '=1' } });
-    expect(calculate('\\lim_{x\\to\\infty}\\arctan x')).toEqual({ kind: 'value', result: { exact: '=\\frac{\\pi}{2}', decimal: '\\approx 1.57079632679' } });
+    expect(calculate('\\lim_{x\\to0}\\frac{\\sin x}{x}')).toEqual({ kind: 'value', result: { exact: '=1', decimal: '=1', scientific: '=1\\times10^{0}' } });
+    expect(calculate('\\lim_{x\\to\\infty}\\arctan x')).toEqual({ kind: 'value', result: { exact: '=\\frac{\\pi}{2}', decimal: '\\approx 1.57079632679', scientific: '\\approx 1.57079632679\\times10^{0}' } });
   });
 
   test('infinite limits show ∞ in both modes', () => {
-    expect(calculate('\\lim_{x\\to0^{+}}\\frac{1}{x}')).toEqual({ kind: 'value', result: { exact: '=\\infty', decimal: '=\\infty' } });
+    expect(calculate('\\lim_{x\\to0^{+}}\\frac{1}{x}')).toEqual({ kind: 'value', result: { exact: '=\\infty', decimal: '=\\infty', scientific: '=\\infty' } });
     expect(simplifyLatex('\\lim_{x\\to0^{-}}\\frac{1}{x}')).toBe('-\\infty');
     expect(simplifyLatex('\\lim_{x\\to0}\\frac{1}{x^{2}}')).toBe('\\infty');
   });
@@ -50,9 +50,9 @@ describe('lim on screen', () => {
   });
 
   test('equations and other lines can use limits', () => {
-    expect(calculate('\\lim_{x\\to0}\\frac{\\sin\\left(ax\\right)}{x}=3')).toEqual({ kind: 'solved', solutions: { exactLines: ['a=3'], decimalLines: ['a=3'], notes: [] } });
+    expect(calculate('\\lim_{x\\to0}\\frac{\\sin\\left(ax\\right)}{x}=3')).toEqual({ kind: 'solved', solutions: { exactLines: ['a=3'], decimalLines: ['a=3'], scientificLines: ['a=3\\times10^{0}'], notes: [] } });
     const [, squared, atA] = evaluateWorkspace(['L=\\lim_{x\\to0}\\frac{\\sin\\left(3x\\right)}{x}', 'L^{2}', '\\lim_{x\\to a}x^{3}', 'a=2']);
-    expect(squared.result).toEqual({ kind: 'value', result: { exact: '=9', decimal: '=9' } });
-    expect(atA.result).toEqual({ kind: 'value', result: { exact: '=8', decimal: '=8' } });
+    expect(squared.result).toEqual({ kind: 'value', result: { exact: '=9', decimal: '=9', scientific: '=9\\times10^{0}' } });
+    expect(atA.result).toEqual({ kind: 'value', result: { exact: '=8', decimal: '=8', scientific: '=8\\times10^{0}' } });
   });
 });

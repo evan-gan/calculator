@@ -1,4 +1,5 @@
-export type DisplayMode = 'exact' | 'decimal';
+/** Which answer format results show; each matches a field of `ResultLine`. */
+export type DisplayMode = 'exact' | 'decimal' | 'scientific';
 
 /** A link from one app to the other (calculator ↔ graphing). */
 export interface AppLink {

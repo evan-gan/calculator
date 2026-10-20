@@ -29,7 +29,7 @@ describe('calculus with variables from other lines', () => {
 describe('definitions without an exact value', () => {
   test('show their approximation and still work in other lines', () => {
     const [definition, usage] = results(['f=\\int _0^1e^{x^{2}}dx', '2f']);
-    expect(definition).toEqual({ kind: 'solved', solutions: { exactLines: ['f\\approx 1.46265174591'], decimalLines: ['f\\approx 1.46265174591'], notes: [] } });
+    expect(definition).toEqual({ kind: 'solved', solutions: { exactLines: ['f\\approx 1.46265174591'], decimalLines: ['f\\approx 1.46265174591'], scientificLines: ['f\\approx 1.46265174591\\times10^{0}'], notes: [] } });
     expect(usage).toMatchObject({ result: { exact: '\\approx 2.92530349181' } });
   });
 });

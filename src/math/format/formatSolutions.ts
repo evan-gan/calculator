@@ -5,16 +5,20 @@ import { evaluate } from '../evaluate/evaluate';
 import { differenceOf, quotientOf, sumOf } from '../operations/arithmetic';
 import type { Rational } from '../number/rational';
 import type { ExactSolution, Solution, SolveOutcome } from '../solve/types';
-import { floatToLatex, rationalToDecimalLatex, SIGNIFICANT_DIGITS } from './toDecimal';
+import { floatToLatex, rationalToDecimalLatex, SIGNIFICANT_DIGITS, type NumberNotation } from './toDecimal';
 import { plusMinusToLatex, toLatex } from './toLatex';
 import { toDecimalLatexWithVariables } from './decimalize';
 
-/** Ready-to-render LaTeX lines for a solve result, in both display modes. */
+/** Ready-to-render LaTeX lines for a solve result, in every display mode. */
 export interface SolutionDisplay {
   exactLines: string[];
   decimalLines: string[];
+  scientificLines: string[];
   notes: string[];
 }
+
+const NO_LINES = { exactLines: [], decimalLines: [], scientificLines: [] };
+
 
 const LIST_SEPARATOR = ',\\ ';
 
@@ -61,27 +65,27 @@ function pairPlusMinus(solutions: ExactSolution[]): string[] {
   return pieces.map((piece) => piece.latex);
 }
 
-function periodicLine(variable: string, solution: ExactSolution, decimal: boolean): string {
-  const period = solution.period!;
-  if (!decimal) {
-    const isZeroValue = solution.value.type === 'num' && solution.value.value.isZero();
-    const periodText = `${toLatex(period)} n`;
-    return `${variable}=${isZeroValue ? periodText : `${toLatex(solution.value)}+${periodText}`}`;
-  }
-  const valueNumber = evaluate(solution.value);
-  const periodText = `${floatToLatex(evaluate(period))}n`;
-  return `${variable}\\approx ${valueNumber === 0 ? periodText : `${floatToLatex(valueNumber)}+${periodText}`}`;
+function periodicExactLine(variable: string, solution: ExactSolution): string {
+  const isZeroValue = solution.value.type === 'num' && solution.value.value.isZero();
+  const periodText = `${toLatex(solution.period!)} n`;
+  return `${variable}=${isZeroValue ? periodText : `${toLatex(solution.value)}+${periodText}`}`;
 }
 
-function decimalList(variable: string, values: Expr[] | number[]): string {
+function periodicDecimalLine(variable: string, solution: ExactSolution, notation: NumberNotation): string {
+  const valueNumber = evaluate(solution.value);
+  const periodText = `${floatToLatex(evaluate(solution.period!), notation)}n`;
+  return `${variable}\\approx ${valueNumber === 0 ? periodText : `${floatToLatex(valueNumber, notation)}+${periodText}`}`;
+}
+
+function decimalList(variable: string, values: Expr[] | number[], notation: NumberNotation): string {
   const allExact = values.every(
     (value) => typeof value !== 'number' && (containsVariable(value) || decimalRelation(value) === '='),
   );
   const texts = values.map((value) => {
-    if (typeof value === 'number') return floatToLatex(value);
-    if (value.type === 'num') return rationalToDecimalLatex(value.value);
+    if (typeof value === 'number') return floatToLatex(value, notation);
+    if (value.type === 'num') return rationalToDecimalLatex(value.value, notation);
     // A definition like y = 2x keeps its variables; only the numbers become decimals.
-    return containsVariable(value) ? toDecimalLatexWithVariables(value) : floatToLatex(evaluate(value));
+    return containsVariable(value) ? toDecimalLatexWithVariables(value, notation) : floatToLatex(evaluate(value), notation);
   });
   return `${variable}${allExact ? '=' : '\\approx '}${texts.join(LIST_SEPARATOR)}`;
 }
@@ -94,39 +98,46 @@ function formatSolutionList(variable: string, solutions: Solution[]): SolutionDi
 
   const exactLines: string[] = [];
   const decimalLines: string[] = [];
+  const scientificLines: string[] = [];
   const notes: string[] = [];
+  const pushApproximations = (lineFor: (notation: NumberNotation) => string) => {
+    decimalLines.push(lineFor('decimal'));
+    scientificLines.push(lineFor('scientific'));
+  };
   if (plain.length > 0) {
+    const values = plain.map((solution) => solution.value);
     exactLines.push(`${variable}=${pairPlusMinus(plain).join(LIST_SEPARATOR)}`);
-    decimalLines.push(decimalList(variable, plain.map((solution) => solution.value)));
+    pushApproximations((notation) => decimalList(variable, values, notation));
   }
   for (const solution of periodic) {
-    exactLines.push(periodicLine(variable, solution, false));
-    decimalLines.push(periodicLine(variable, solution, true));
+    exactLines.push(periodicExactLine(variable, solution));
+    pushApproximations((notation) => periodicDecimalLine(variable, solution, notation));
   }
   if (periodic.length > 0) notes.push('n can be any integer.');
   if (approximate.length > 0) {
-    const line = decimalList(variable, approximate);
-    exactLines.push(line);
-    decimalLines.push(line);
+    // With no exact form, exact mode shows the plain decimals.
+    exactLines.push(decimalList(variable, approximate, 'decimal'));
+    pushApproximations((notation) => decimalList(variable, approximate, notation));
     notes.push('No exact form was found, so these values are approximate.');
   }
-  return { exactLines, decimalLines, notes };
+  return { exactLines, decimalLines, scientificLines, notes };
 }
 
 export function formatSolveOutcome(outcome: SolveOutcome): SolutionDisplay {
   const variable = outcome.variable;
   switch (outcome.kind) {
     case 'noSolution':
-      return { exactLines: [], decimalLines: [], notes: ['No real solution.'] };
+      return { ...NO_LINES, notes: ['No real solution.'] };
     case 'allReals': {
       if (outcome.excluded.length === 0) {
-        return { exactLines: [], decimalLines: [], notes: [`Every real number is a solution for ${variable}.`] };
+        return { ...NO_LINES, notes: [`Every real number is a solution for ${variable}.`] };
       }
       const excludedDisplay = formatSolutionList(variable, outcome.excluded);
       const toExclusion = (line: string) => line.replace(/^(.*?)(=|\\approx )/, (_, name: string) => `${name}\\ne `);
       return {
         exactLines: excludedDisplay.exactLines.map(toExclusion),
         decimalLines: excludedDisplay.decimalLines.map(toExclusion),
+        scientificLines: excludedDisplay.scientificLines.map(toExclusion),
         notes: ['Every other real number is a solution (the equation is undefined at these values).'],
       };
     }
@@ -139,8 +150,10 @@ export function formatSolveOutcome(outcome: SolveOutcome): SolutionDisplay {
 export function formatDefinition(variable: string, value: Expr): SolutionDisplay {
   // An integral or series with no exact value would only be restated, so show its approximation.
   if (containsCalculusOperator(value) && !containsVariable(value)) {
-    const line = `${variable}\\approx ${floatToLatex(evaluate(value))}`;
-    return { exactLines: [line], decimalLines: [line], notes: [] };
+    const approximation = evaluate(value);
+    const line = `${variable}\\approx ${floatToLatex(approximation)}`;
+    const scientificLine = `${variable}\\approx ${floatToLatex(approximation, 'scientific')}`;
+    return { exactLines: [line], decimalLines: [line], scientificLines: [scientificLine], notes: [] };
   }
   return formatSolutionList(variable, [{ kind: 'exact', value }]);
 }

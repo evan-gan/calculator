@@ -7,8 +7,8 @@ describe('calculate (UI entry point)', () => {
   });
 
   test('numbers give an exact answer and a decimal answer', () => {
-    expect(calculate('\\sqrt{72}')).toEqual({ kind: 'value', result: { exact: '=6 \\sqrt{2}', decimal: '\\approx 8.48528137424' } });
-    expect(calculate('\\frac{1}{4}')).toEqual({ kind: 'value', result: { exact: '=\\frac{1}{4}', decimal: '=0.25' } });
+    expect(calculate('\\sqrt{72}')).toEqual({ kind: 'value', result: { exact: '=6 \\sqrt{2}', decimal: '\\approx 8.48528137424', scientific: '\\approx 8.48528137424\\times10^{0}' } });
+    expect(calculate('\\frac{1}{4}')).toEqual({ kind: 'value', result: { exact: '=\\frac{1}{4}', decimal: '=0.25', scientific: '=2.5\\times10^{-1}' } });
   });
 
   test('a one-variable expression is simplified and its roots are reported', () => {

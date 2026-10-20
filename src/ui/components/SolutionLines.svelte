@@ -5,7 +5,13 @@
 
   let { solutions, mode }: { solutions: SolutionDisplay; mode: DisplayMode } = $props();
 
-  const lines = $derived(mode === 'exact' ? solutions.exactLines : solutions.decimalLines);
+  const LINES_BY_MODE = {
+    exact: 'exactLines',
+    decimal: 'decimalLines',
+    scientific: 'scientificLines',
+  } as const satisfies Record<DisplayMode, keyof SolutionDisplay>;
+
+  const lines = $derived(solutions[LINES_BY_MODE[mode]]);
 </script>
 
 <div class="solution-lines">

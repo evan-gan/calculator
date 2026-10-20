@@ -12,10 +12,12 @@ import { simplify } from './simplify/simplify';
 import { solveEquation } from './solve/solveEquation';
 import { applyAngleMode, type AngleMode } from './transform/angleMode';
 
-/** An answer in both display modes. Each string is LaTeX including its leading = or ≈. */
+/** An answer in every display mode. Each string is LaTeX including its leading = or ≈. */
 export interface ResultLine {
   exact: string;
   decimal: string;
+  /** Like decimal, but numbers are written a×10ⁿ (integer coefficients of variables stay as they are). */
+  scientific: string;
 }
 
 export type CalculationResult =
@@ -32,10 +34,12 @@ export type CalculationResult =
 
 function evaluateNumber(expr: Expr): CalculationResult {
   const exact = simplify(expr);
-  const decimal = `${decimalRelation(exact)}${exprToDecimalLatex(exact)}`;
+  const relation = decimalRelation(exact);
+  const decimal = `${relation}${exprToDecimalLatex(exact)}`;
+  const scientific = `${relation}${exprToDecimalLatex(exact, 'scientific')}`;
   // An integral or series with no exact value would only be restated; show its approximation instead.
-  if (containsCalculusOperator(exact)) return { kind: 'value', result: { exact: decimal, decimal } };
-  return { kind: 'value', result: { exact: `=${toLatex(exact)}`, decimal } };
+  if (containsCalculusOperator(exact)) return { kind: 'value', result: { exact: decimal, decimal, scientific } };
+  return { kind: 'value', result: { exact: `=${toLatex(exact)}`, decimal, scientific } };
 }
 
 /** Indefinite integrals are only known up to a constant, so their results end in + C. */
@@ -47,7 +51,11 @@ function simplifyWithVariables(expr: Expr, variables: string[]): CalculationResu
   const simplified = simplify(expr);
   const isIndefinite = containsIndefiniteIntegral(expr);
   const finish = (latex: string) => `=${isIndefinite ? withIntegrationConstant(latex) : latex}`;
-  const result = { exact: finish(toLatex(simplified)), decimal: finish(toDecimalLatexWithVariables(simplified)) };
+  const result = {
+    exact: finish(toLatex(simplified)),
+    decimal: finish(toDecimalLatexWithVariables(simplified)),
+    scientific: finish(toDecimalLatexWithVariables(simplified, 'scientific')),
+  };
   // Roots of an antiderivative depend on the unknown constant, so they aren't shown. An unevaluated
   // integral or series would need thousands of numeric evaluations to scan for roots, so it's skipped too.
   if (variables.length !== 1 || isIndefinite || containsCalculusOperator(simplified)) {

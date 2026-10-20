@@ -34,9 +34,10 @@
     { value: 'radians', label: 'RAD' },
     { value: 'degrees', label: 'DEG' },
   ];
-  const DISPLAY_OPTIONS: { value: DisplayMode; label: string }[] = [
+  const DISPLAY_OPTIONS: { value: DisplayMode; label: string; ariaLabel?: string }[] = [
     { value: 'exact', label: 'a/b' },
     { value: 'decimal', label: '1.5' },
+    { value: 'scientific', label: '×10ⁿ', ariaLabel: 'Scientific notation' },
   ];
 
   const keepFocus = (event: MouseEvent) => event.preventDefault();
@@ -60,7 +61,7 @@
 
   <div class="controls">
     <SegmentedToggle bind:value={angleMode} options={ANGLE_OPTIONS} label="Angle unit" />
-    <SegmentedToggle bind:value={displayMode} options={DISPLAY_OPTIONS} label="Answer format: exact or decimal" />
+    <SegmentedToggle bind:value={displayMode} options={DISPLAY_OPTIONS} label="Answer format: exact, decimal or scientific" />
     <button type="button" class="icon" aria-label="Undo" disabled={!canUndo} onmousedown={keepFocus} onclick={onUndo}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H4V2M4.5 6.5A9 9 0 1 1 3 13" /></svg>
     </button>
