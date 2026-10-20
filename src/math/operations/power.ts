@@ -94,6 +94,10 @@ function powerOfPower(base: PowerNode, outerExponent: Expr): Expr {
   if (outerIsInteger || isPositiveConstant(base.base)) {
     return simplifyPower(base.base, simplifyProduct([innerExponent, outerExponent]));
   }
+  // Odd roots of reals are multiplicative, so exponents just multiply: (x³)^(1/3) = x, (x²)^(1/3) = x^(2/3)
+  if (outerExponent.type === 'num' && innerExponent.type === 'num' && outerExponent.value.denominator % 2n !== 0n) {
+    return simplifyPower(base.base, num(innerExponent.value.mul(outerExponent.value)));
+  }
   // (x^2)^(1/2) = |x|, because squaring loses the sign
   if (isEvenInteger(innerExponent) && innerExponent.type === 'num' && outerExponent.type === 'num') {
     const combined = innerExponent.value.mul(outerExponent.value);
@@ -114,7 +118,7 @@ function powerOfProduct(product: ProductNode, exponent: Expr): Expr {
   const pulledOut: Expr[] = [];
   const kept: Expr[] = [];
   for (const factor of product.factors) {
-    if (isPositiveConstant(factor)) {
+    if (isPositiveConstant(factor) || leavesRoot(factor, exponent.value)) {
       pulledOut.push(simplifyPower(factor, exponent));
     } else if (oddRoot && factor.type === 'num' && factor.value.isNegative()) {
       pulledOut.push(simplifyPower(factor, exponent));
@@ -126,6 +130,19 @@ function powerOfProduct(product: ProductNode, exponent: Expr): Expr {
   if (kept.length === 1) pulledOut.push(simplifyPower(kept[0], exponent));
   if (kept.length > 1) pulledOut.push(pow({ type: 'mul', factors: kept }, exponent));
   return simplifyProduct(pulledOut);
+}
+
+/**
+ * True when a power b^n can come out of a root whole: √(x²y) = |x|√y, ∛(x³y) = x∛y.
+ * Even roots need n even (x² ≥ 0); odd roots work for any sign. Partial results like
+ * (x²)^(1/4) = √|x| are left inside, since they don't read any simpler.
+ */
+function leavesRoot(factor: Expr, rootExponent: Rational): boolean {
+  if (factor.type !== 'pow' || factor.exponent.type !== 'num' || !factor.exponent.value.isInteger()) return false;
+  const power = factor.exponent.value;
+  const evenRoot = rootExponent.denominator % 2n === 0n;
+  if (evenRoot && power.numerator % 2n !== 0n) return false;
+  return power.mul(rootExponent).isInteger();
 }
 
 function powerOfSum(sum: SumNode, exponent: Expr): Expr | null {

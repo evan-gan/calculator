@@ -1,6 +1,7 @@
 import { toKey } from '../ast/inspect';
 import { num, type Expr } from '../ast/nodes';
 import { Rational } from '../number/rational';
+import { expandToCancel } from './expandToCancel';
 import { compareTerms } from './order';
 
 /** Split a simplified term into its rational coefficient and the remaining factors (3√2x -> 3, [√2, x]). */
@@ -51,5 +52,6 @@ export function simplifySum(terms: Expr[]): Expr {
 
   if (combined.length === 0) return num(0);
   if (combined.length === 1) return combined[0];
-  return { type: 'add', terms: combined.sort(compareTerms) };
+  const sum: Expr = { type: 'add', terms: combined.sort(compareTerms) };
+  return expandToCancel(sum) ?? sum;
 }

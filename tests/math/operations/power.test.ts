@@ -33,3 +33,15 @@ describe('power and radical simplification', () => {
     expect(() => simplifyLatex('2^{1000000}')).toThrow('too large');
   });
 });
+
+describe('roots of products with variable powers', () => {
+  test.each([
+    ['\\sqrt{a^2b}', '\\sqrt{b} \\left|a\\right|'],
+    ['\\sqrt{x^2y^4z}', 'y^{2} \\sqrt{z} \\left|x\\right|'],
+    ['\\sqrt[3]{x^3y}', 'x \\sqrt[3]{y}'],
+    ['\\sqrt[3]{x^3}', 'x'],
+    ['\\sqrt{xy}', '\\sqrt{x y}'],
+  ])('%s = %s', (input, expected) => {
+    expect(simplifyLatex(input)).toBe(expected);
+  });
+});

@@ -2,6 +2,7 @@ import { isConstantExpr, toKey } from '../ast/inspect';
 import { num, ONE, type Expr } from '../ast/nodes';
 import { Rational } from '../number/rational';
 import { simplifySum } from './add';
+import { cancelCommonFactors } from './cancelFactors';
 import { compareFactors, isRadical } from './order';
 import { simplifyPower } from './power';
 import { collectRadical, normalizeRadicals, type PrimeExponents } from './radicals';
@@ -11,6 +12,9 @@ import { collectRadical, normalizeRadicals, type PrimeExponents } from './radica
 const MAX_PASSES = 8;
 
 type PassResult = { settled: true; expr: Expr } | { settled: false; factors: Expr[] };
+
+// True while cancelCommonFactors rebuilds its result, whose factors have nothing left to cancel.
+let rebuildingCancelled = false;
 
 /**
  * Simplify a product whose factors are already simplified: multiply rational coefficients,
@@ -68,9 +72,20 @@ function combineFactors(factors: Expr[]): PassResult {
   if (needsAnotherPass) return { settled: false, factors: [num(coefficient), ...normalized.radicals, ...others] };
 
   const sorted = [...normalized.radicals, ...others].sort(compareFactors);
+  const cancelled = rebuildingCancelled ? null : cancelCommonFactors(coefficient, sorted, rebuildCancelled);
+  if (cancelled) return { settled: true, expr: cancelled };
   const distributed = distributeOverSum(coefficient, sorted);
   if (distributed) return { settled: true, expr: distributed };
   return { settled: true, expr: buildProduct(coefficient, sorted) };
+}
+
+function rebuildCancelled(factors: Expr[]): Expr {
+  rebuildingCancelled = true;
+  try {
+    return simplifyProduct(factors);
+  } finally {
+    rebuildingCancelled = false;
+  }
 }
 
 /**

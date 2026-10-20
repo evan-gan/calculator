@@ -73,11 +73,23 @@ export function countOccurrences(expr: Expr, name: string): number {
   return count;
 }
 
+// Expr nodes are never mutated, so a node's key can be remembered. The simplifier asks for
+// the same keys over and over (grouping like terms, merging powers, cancelling factors).
+const keyCache = new WeakMap<Expr, string>();
+
 /**
  * Canonical string for an expression. Because the simplifier sorts terms and factors,
  * two simplified expressions are equal exactly when their keys match.
  */
 export function toKey(expr: Expr): string {
+  const cached = keyCache.get(expr);
+  if (cached !== undefined) return cached;
+  const key = buildKey(expr);
+  keyCache.set(expr, key);
+  return key;
+}
+
+function buildKey(expr: Expr): string {
   switch (expr.type) {
     case 'num':
       return expr.value.toString();
