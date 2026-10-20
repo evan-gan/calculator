@@ -2,6 +2,8 @@
 
 A static Svelte 5 + TypeScript scientific calculator that gives **exact** answers (fractions, radicals, multiples of π, exact logs/trig) with a toggle for decimals. It also **solves equations in one unknown** and returns the exact value(s) of that variable (e.g. `x² − 6x + 4 = 0` → `x = 3 ± √5`), and does **calculus**: derivatives (`d/dx` prefix), indefinite/definite/improper integrals, finite/infinite sums (Σ) and products (Π), and limits (`lim_{x→a}`, one-sided and at ±∞), exact where possible and numeric (labelled ≈) otherwise. The screen is a **list of live, editable lines**: a line can define a variable (`a = 5`, or solve one: `2x = 6`) and any other line, above or below, can use it; circular definitions are reported as errors. Input is typed with MathQuill or an on-screen keypad.
 
+There are **two apps** sharing the math engine and the UI components: the **scientific calculator** (`index.html` → `src/scientific/`) and the **graphing app** (`graphing/index.html` → `src/graphing/`, served at `/graphing/`). The graphing app is the same editable line list (keypad hidden until the keyboard button is pressed, so phones use their own keyboard meanwhile) next to a canvas that pans (drag), zooms (wheel, pinch, +/− buttons, home), has a wrench settings menu (text size, grid on/off + square/polar, axis numbers, minor gridlines, arrows, per-axis show/label/range/step, lock viewport, radians/degrees), shows a curve point's decimal coordinates while you press on a curve, and draws every line that uses x or y: `y = f(x)`, a bare expression in x, `x = g(y)`, or an implicit curve (`x² + y² = 25`). x and y are reserved there (never defined by a line); other variables must be defined on another line (`a = 2`, then `y = ax`).
+
 Background notes the design follows (read these before changing the math):
 - `01-pressing-a-key-in-the-calculator.md` — keypress → LaTeX → parse → evaluate pipeline
 - `02-exact-simplification.md` — exact rationals, radicals, trig tables, canonical forms
@@ -13,7 +15,7 @@ Background notes the design follows (read these before changing the math):
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Vite dev server |
-| `pnpm build` | Static build to `dist/` (relative paths, works from any folder/host) |
+| `pnpm build` | Static build of both apps to `dist/` (`dist/index.html` calculator, `dist/graphing/index.html` graphing; relative paths, works from any folder/host) |
 | `pnpm preview` | Serve the built `dist/` |
 | `pnpm test` | Run the whole test suite (Vitest, config in `tests/vitest.config.ts`; excludes `tests/temp/`) |
 | `pnpm test:temp` | Run throwaway exploration tests in `tests/temp/` (gitignored; prints console output) |
@@ -21,7 +23,7 @@ Background notes the design follows (read these before changing the math):
 
 ## Architecture
 
-Two independent halves. **The UI only imports from `src/math/index.ts`** (`evaluateWorkspace(lines)`, `calculate(latex)`), so the math engine has no DOM/Svelte dependencies and is fully unit-tested.
+Two independent halves. **The UI only imports from `src/math/index.ts`** (`evaluateWorkspace(lines)`, `calculate(latex)`, and for graphing `evaluateGraphWorkspace(lines)` + `traceCurve(plot, window, pixels)`), so the math engine has no DOM/Svelte dependencies and is fully unit-tested.
 
 ```
 keypress → MathQuill (LaTeX) → calculate(latex)
@@ -37,44 +39,73 @@ Calculus operators are `func` nodes named `derivative` / `integral` / `sum` / `p
 
 ## File map
 
-### Entry / app shell
-- `index.html` — page shell, inline SVG favicon.
-- `src/main.ts` — mounts `App.svelte`, imports global CSS.
-- `src/App.svelte` — Layout (editable expression list on top, keypad at the bottom) and app state: the list of lines, the active line, Exact/Decimal mode, RAD/DEG, undo/redo, `ans`. Evaluates all lines together with `evaluateWorkspace`.
-- `vite.config.ts`, `svelte.config.js`, `tsconfig.json` — standard config (`base: './'` for static hosting).
+### Entry / app shells
+- `index.html` — calculator page shell, inline SVG favicon. `graphing/index.html` — graphing page shell.
+- `vite.config.ts` — multi-page build (`build.rollupOptions.input`: scientific + graphing), `base: './'` for static hosting. `svelte.config.js`, `tsconfig.json` — standard config.
+
+### `src/scientific/` (calculator app)
+- `main.ts` — mounts `ScientificApp.svelte`, imports global CSS.
+- `ScientificApp.svelte` — layout only: `ExpressionList` on top, `Keypad` at the bottom (with a "graph" link). State lives in a `LineEditor` (storage key `exact-calculator:lines`); results from `evaluateWorkspace`; Exact/Decimal and RAD/DEG.
+
+### `src/graphing/` (graphing app — reuses `src/ui/` and `src/math/`)
+- `main.ts` — mounts `GraphingApp.svelte`.
+- `GraphingApp.svelte` — sidebar (link back to calculator, `KeypadToggle`, `ExpressionList` with a color swatch per graphed line) + `GraphCanvas`; keypad below when shown. Its own `LineEditor` (key `exact-calculator:graph-lines`). Owns `graphSettings` (saved) and `angleMode` (shared by the keypad toolbar and the settings menu). Results from `evaluateGraphWorkspace`; `curves` = lines with a plot. Phones (≤720px): graph on top, list below.
+- `types.ts` — `GraphCurve` ({ id, colorIndex, plot }).
+- `components/GraphCanvas.svelte` — the canvas: size via ResizeObserver, asks `GraphRenderer` for at most one frame per animation frame (and another frame right away while tiles are still unfinished), pointer handling: press on a curve (within 8px mouse / 20px touch) → traced point that follows that curve while held; elsewhere drag/pinch through `PointerGesture`; mouse over a curve → normal arrow cursor. Non-passive wheel zoom at the cursor. Wrench button + `ZoomControls`; the settings menu opens to their left (closes on canvas press / Escape). `moveView` ignores gestures when the viewport is locked.
+- `components/ControlButton.svelte` — 40px icon button used by the wrench and `ZoomControls.svelte` (+, −, home; disabled when locked). `KeypadToggle.svelte` — show/hide keypad button.
+- `components/settings/` — the wrench menu: `GraphSettingsMenu.svelte` (layout: A|A text size, Grid + `GridTypePicker.svelte` (square/polar pictures), Axis Numbers, Minor Gridlines, Arrows, two `AxisSettingsFields.svelte` (show, label, `min ≤ x ≤ max` range that follows the view, step), More Options (lock viewport, reset), Radians|Degrees), `NumberBox.svelte` (text box that commits a number on Enter/blur via `evaluateNumberInput`, accepts 2π, 1/2, √2; red when invalid), `CheckboxField.svelte`.
+- `state/viewport.ts` — `Viewport` (center + `unitsPerPixelX/Y`; equal unless typed ranges differ): `homeViewport` (x from −10 to 10, square), `visibleWindow`, `viewportForWindow` (typed ranges → viewport), `toScreen`/`toGraph`, `panByPixels`, `zoomAround` (keeps the point under the cursor and the x:y ratio; clamped).
+- `state/pointerGesture.ts` — `PointerGesture`: one pointer pans, two pinch-zoom around their midpoint.
+- `state/graphSettings.ts` — `GraphSettings` / `AxisSettings` types, defaults, `mergeGraphSettings` (validates saved data), load/save (key `exact-calculator:graph-settings`).
+- `state/nearestPoint.ts` — `nearestCurvePoint`: closest point on the polylines drawn last frame (screen distance, interpolated along segments; no math re-evaluation), optionally restricted to one curve.
+- `render/graphRenderer.ts` — `GraphRenderer`: draws a `GraphFrame` (grid, curves, traced point); mid-gesture gives tracing an 8ms budget per frame; resizes the canvas buffer only when its size changes, caches the theme (re-read on scheme/text-size change), keeps `drawnCurves` for point lookup.
+- `render/traceCache.ts` — **main drag optimization**: `TraceCache` traces each plot (WeakMap by plot object) in fixed tiles of the plane — 128px squares for implicit curves, 256px strips for y = f(x) / x = g(y) — at a scale rounded to 2^(1/4) steps, and keeps them (≤600 per plot). A drag only traces the tiles that come on screen (≤5ms); a zoom reuses tiles until the rounded scale changes. Tiles not traced within the frame's budget are covered by the last complete frame's curve and finished on the next frames.
+- `render/drawGrid.ts` — background, `axisSteps` (typed step via `customGridSteps`, else automatic), cartesian minor/major lines, or `drawPolarGrid.ts` (circles at the x step, spokes every 15°, clipped to the view); then `drawAxes.ts` (each axis optional, arrowheads, numbers kept on screen, axis names). `render/gridLines.ts` — `gridValues`, `strokeLines`, `crispPixel`. `render/gridSteps.ts` — 1/2/5×10ⁿ spacing, `customGridSteps`, tick labels (`formatTick`, enough decimals for steps like π), `formatCoordinate` (traced point, precise to the zoom), `formatRangeValue` (6 sig. figs). `render/drawCurves.ts` — strokes polylines (clamps far-off coordinates). `render/drawTracedPoint.ts` — dot + "(x, y)" label box (flips near edges). `render/graphTheme.ts` — graph colors from CSS tokens + sizes for normal/large text (label font, curve width); a curve's color follows its line id (`curveColorIndex`, `curveColorVariable`).
 
 ### `src/styles/` (shared tokens)
-- `tokens.css` — all colors/spacing/radii/fonts (incl. keypad key colors and the serif `--font-math` for key faces), light + dark themes. Re-skin here.
+- `tokens.css` — all colors/spacing/radii/fonts (incl. keypad key colors, the serif `--font-math` for key faces, and graph tokens `--color-graph-1..6` (curve colors in fixed order, validated for color-blind separation) + `--color-graph-bg/grid-minor/grid-major/axis/label`), light + dark themes. Re-skin here.
 - `global.css` — resets, base styles, MathQuill color overrides.
 
-### `src/ui/` (UI section)
-- `types.ts` — `DisplayMode` ('exact' | 'decimal'), `ExpressionLine` ({ id, latex }).
+### `src/ui/` (shared UI used by both apps)
+- `types.ts` — `DisplayMode` ('exact' | 'decimal'), `ExpressionLine` ({ id, latex }), `AppLink` (link to the other app).
+- `state/lineEditor.svelte.ts` — `LineEditor` (runes class, construct during component init): lines, active line, add/delete/move focus/clear, undo/redo (an effect snapshots every change), saving under a per-app storage key. `focusHandler` is set by `ExpressionList`.
 - `state/undoHistory.ts` — generic undo/redo snapshot stack (snapshots of the whole line list).
+- `state/undoShortcut.ts` — `historyCommandFor(keys)`: ⌘Z/Ctrl+Z undo, ⌘⇧Z/Ctrl+Shift+Z/Ctrl+Y redo. `ExpressionList` listens on window (capture phase, so MathQuill never sees it) in both apps; plain text boxes (graph settings) keep native undo.
 - `state/lines.ts` — pure list helpers: insert after, remove (keeps one line), neighbor, next id.
-- `state/savedLines.ts` — keeps the lines in localStorage between visits (safe if storage is blocked).
+- `state/previousAnswer.ts` — what the `ans` key inserts (nearest numeric line above).
+- `state/savedLines.ts` — keeps the lines in localStorage between visits under a given key (safe if storage is blocked).
 - `mathquill/loadMathQuill.ts` — loads MathQuill 0.10 once (puts jQuery on `window` first), returns the interface.
 - `mathquill/config.ts` — MathField typing options (auto commands `sqrt pi theta nthroot sum prod int infty to` — `to` types →; operator names incl. `lim`; Σ starts with `n=`). Any operator name added here must be understood by `src/math/parse/tokenize.ts`.
 - `mathquill/types.ts`, `mathquill/mathquill.d.ts` — minimal typings for MathQuill.
 - `keypad/keys.ts` — **keypad layout as data**: `KEYPAD_TABS` (main / abc / func / calc — d/dx, ∫, ∫ₐᵇ, Σ, Π, lim (types `lim_xto`, cursor at the point), ∞, →, dx, x, n, h), each made of grid `KeyGroup`s with key `span`s and spacers; `KeyLabel` (text, scripts, fraction); `KeyAction` (write/cmd/typed/keystroke/ans/shift/submit). Add or move keys here.
-- `components/MathField.svelte` — editable MathQuill input; bindable `latex`; Enter / backspace-at-start / up / down callbacks; `applyAction()` / `focus()` (focus works even before MathQuill has loaded). Sets `inputmode="none"` on MathQuill's hidden textarea so phones don't open the system keyboard (paste/long-press still work).
-- `components/ExpressionRow.svelte` — one editable line: MathField, live result on the right, delete button. Enter adds a line below, backspace on an empty line deletes it, ↑/↓ move between lines.
+- `components/MathField.svelte` — editable MathQuill input; bindable `latex`; Enter / backspace-at-start / up / down callbacks; `applyAction()` / `focus()` (focus works even before MathQuill has loaded). Sets `inputmode="none"` on MathQuill's hidden textarea so phones don't open the system keyboard (paste/long-press still work), unless `allowSystemKeyboard` (graphing app with keypad hidden).
+- `components/ExpressionList.svelte` — the editable list for a `LineEditor`: renders rows, focuses lines, optional per-row `marker` snippet, undo/redo keyboard shortcuts; exports `handleKeyAction(action)` (Enter adds a line, ans, else into the active row).
+- `components/ExpressionRow.svelte` — one editable line: optional marker, MathField, live result on the right, delete button, `placeholder` text. Enter adds a line below, backspace on an empty line deletes it, ↑/↓ move between lines.
 - `components/ResultView.svelte` — renders any `CalculationResult` (value, simplified + roots, solved, truth, error), right-aligned.
 - `components/SolutionLines.svelte` — solution lines + notes for the chosen mode.
 - `components/StaticMath.svelte` — read-only LaTeX renderer.
 - `components/Keypad.svelte` — keypad panel: toolbar + the active tab's key groups; Shift state for the abc tab.
-- `components/KeypadToolbar.svelte` — tabs, RAD/DEG and exact/decimal toggles, undo, redo, clear all.
+- `components/KeypadToolbar.svelte` — tabs, RAD/DEG and exact/decimal toggles, undo, redo, clear all, optional `appLink`.
 - `components/KeyButton.svelte` / `KeyFace.svelte` — one key, and how its label is drawn.
-- `components/SegmentedToggle.svelte` — generic segmented switch (RAD | DEG, a/b | 1.5).
+- `components/SegmentedToggle.svelte` — generic segmented switch (RAD | DEG, a/b | 1.5); options may set `fontSize`/`ariaLabel`, `stretch` fills the width.
 
 ### `src/math/` (math section)
-- `index.ts` — public API: `evaluateWorkspace`, `calculate`, result types.
+- `index.ts` — public API: `evaluateWorkspace`, `calculate`, `evaluateGraphWorkspace`, `traceCurve`, result and graph types.
+- `evaluateNumber.ts` — `evaluateNumberInput(text)`: plain text like "-10", "2pi", "1/2", "√2", "1e3" → finite number or null (for settings boxes).
 - `calculate.ts` — `calculate(latex, { angleMode })` for a single line, plus `parseLine`, `calculateStatement`, `errorResult` used by the workspace: decides what the input is (number / expression with variables / equation) and builds `CalculationResult` with exact + decimal LaTeX. Appends `+ C` to indefinite integrals; shows `≈` in exact mode for an integral/series with no exact value; skips the roots scan for both. Never throws.
 - `workspace/` — evaluating the whole line list together:
-  - `evaluateWorkspace.ts` — entry point: parse all lines, assign definitions, resolve values, compute each line's result (`LineResult` = result + variable it defines).
+  - `evaluateWorkspace.ts` — entry point: `prepareWorkspace` (parse all lines, assign definitions, resolve values) + `workspaceLineResult` (one line's `LineResult` = result + variable it defines); `WorkspaceOptions.reservedVariables` are never defined (graphing reserves x, y).
   - `parseLines.ts` — parse each line; `v = …` with v absent on the right is an explicit definition (left side only).
-  - `assignDefinitions.ts` — which line defines which variable, order-independent: explicit definitions first, then equations with exactly one not-yet-defined variable (repeated until nothing changes). Duplicate explicit definitions are errors.
+  - `assignDefinitions.ts` — which line defines which variable, order-independent: explicit definitions first, then equations with exactly one not-yet-defined variable (repeated until nothing changes). Duplicate explicit definitions are errors. Lines mentioning a reserved variable never define anything.
   - `resolveDefinitions.ts` — `DefinitionResolver`: depth-first value resolution with cycle detection ("Circular definition: a → b → a."), substitution of known values, and reasons a variable can't be used (several solutions, periodic, approximate, no solution).
   - `types.ts` — `ParsedLine`, `VariableValue`, `LineResult`.
+- `graph/` — what to draw for the graphing app:
+  - `types.ts` — `GraphAxes` (variable per screen axis; `DEFAULT_AXES` = x, y — change here to graph other variables), `Plot` (explicit along horizontal/vertical, or implicit F = 0), `ViewWindow`, `PixelSize`, `Polyline`, `GraphLineResult` (LineResult + plot).
+  - `planPlot.ts` — statement → `Plot`: `y = f(x)` / bare expression in x → explicit; `x = g(y)` → explicit along y; otherwise implicit left − right; free non-axis variables → MathError ("a needs a value…"); numbers / expressions with y → null.
+  - `evaluateGraphWorkspace.ts` — workspace with axes reserved; lines using an axis variable get substituted, planned, and a text result (empty for equations in both x and y).
+  - `traceCurve.ts` — `Plot` + window + pixels → polylines (explicit: 2 samples/pixel; implicit: 4px grid cells); math errors at a point leave a gap.
+  - `sampleFunction.ts` — even sampling into runs, broken at undefined points (bisects to the domain edge) and at poles/jumps (bisection: change that doesn't shrink = discontinuity).
+  - `traceImplicit.ts` — marching squares (shared edge crossings, saddle resolved by the centre value; crossings where |F| grows, i.e. poles, are rejected). Tangential zeros like (x−y)² = 0 aren't found.
 - `transform/angleMode.ts` — degree mode: rewrites sin(u) → sin(u·π/180) and arcsin(u) → arcsin(u)·180/π before simplifying/solving.
 - `errors.ts` — `MathError` (user-facing message).
 - `number/rational.ts` — exact `Rational` (BigInt, always reduced; parses decimals from text).
@@ -125,11 +156,14 @@ Calculus operators are `func` nodes named `derivative` / `integral` / `sum` / `p
 - `format/` — `calculusToLatex.ts` (unevaluated ∫/Σ/Π/d/dx/lim nodes), `toLatex.ts` (exact printing; `\ln|x|`; sums whose terms share a rational or symbolic denominator print as one fraction, e.g. (8+√2+4√6)/(2e); ± pairs), `toDecimal.ts` (exact rational digits, 12 sig. figs), `decimalize.ts` (decimal coefficients in expressions with variables), `formatSolutions.ts` (solution lines for both modes).
 
 ### `tests/` (mirrors `src/math/`)
-- `temp/` — **gitignored scratch tests** for quick experiments (`pnpm test:temp`, config `vitest.temp.config.ts`). Put temporary checks here instead of creating and deleting files elsewhere; never `rm` them. `temp/probe.ts` runs inputs through `calculate` and saves labelled results to `temp/results/<label>.txt` (`PROBE_LABEL=05-something pnpm test:temp tests/temp/x.test.ts`) so runs can be compared later.
+- `temp/` — **gitignored scratch tests** for quick experiments (`pnpm test:temp`, config `vitest.temp.config.ts`). Put temporary checks here instead of creating and deleting files elsewhere; never `rm` them. `temp/graph/graphProbe.test.ts` probes the graph workspace + trace timings. `temp/screenshots/` holds a headless-Chrome screenshot tool (`capture.mjs` — env `SCHEME`, `SETTINGS` (graph settings JSON), `WHEEL` (mouse events), `KEYS` (key events); `shoot-graphing.sh`, `shoot-settings.sh` (menu, polar, traced point, phone), `check-undo.sh` (⌘Z in a real browser); needs `pnpm build && pnpm preview --port 4173`) and its PNGs. `temp/probe.ts` runs inputs through `calculate` and saves labelled results to `temp/results/<label>.txt` (`PROBE_LABEL=05-something pnpm test:temp tests/temp/x.test.ts`) so runs can be compared later.
 - `vitest.config.ts` — single entry for `pnpm test`; `helpers.ts` — `simplifyLatex`, `solveLatex`, `parseExpr`.
 - `math/number` (+ `rationalPolynomial`), `math/parse` (+ `calculusParsing`, `limitParsing`), `math/ast/calculusScopes` (bound variables), `math/operations` (+ `functions/`), `math/evaluate`, `math/format`, `math/transform`, `math/workspace` (shared variables, order independence, cycles, duplicates, `calculusInWorkspace`), `math/solve/polynomial`, `math/solve/strategies`, `math/solve/solveEquation.test.ts`, `math/solve/linearSystem.test.ts`, `math/calculate.test.ts`.
 - `math/calculus/` — `differentiate`, `definiteIntegral`, `numericIntegral`, `antiderivativeLimits`, `readRationalFunction`, `calculateCalculus` (+ C, ≈ display), `integrate/` (`table`, `rationalFunction`, `partialFractions`, `realFactors`, `trigPowers`, `exponentialTrig`, `substitution`, `byParts`), `series/` (`finiteSums`, `infiniteSums`, `telescoping`, `infiniteProducts`, `numericSeries`, `bernoulli`), `limit/` (`limitOperator` — on-screen results, sides, errors, workspace; `indeterminateForms`; `numericLimit`; `rationalLimit`; `growth`).
-- `ui/state/undoHistory.test.ts`, `ui/state/lines.test.ts`, `ui/keypad/layout.test.ts` (every keypad group fills whole rows; every tab has Enter).
+- `math/graph/` — `planPlot`, `evaluateGraphWorkspace`, `sampleFunction`, `traceImplicit`, `traceCurve`; `math/workspace/reservedVariables.test.ts`.
+- `graphing/state/` (`viewport`, `pointerGesture`, `nearestPoint`, `graphSettings`), `graphing/render/` (`gridSteps` incl. custom steps and coordinate formats, `traceCache`).
+- `math/evaluateNumber.test.ts`; `ui/state/undoShortcut.test.ts`.
+- `ui/state/undoHistory.test.ts`, `ui/state/lines.test.ts`, `ui/state/previousAnswer.test.ts`, `ui/keypad/layout.test.ts` (every keypad group fills whole rows; every tab has Enter).
 
 ## Behaviour notes / limits
 - Angles default to radians; DEG switches trig input/output to degrees (solutions get period 360).
@@ -141,4 +175,5 @@ Calculus operators are `func` nodes named `derivative` / `integral` / `sum` / `p
 - A variable used by other lines must have one exact value; one with several solutions (x² = 4), a periodic family, or only approximate values shows its solutions on its own line but gives an explanatory error where it's used. A definition may keep free variables (`y = 2t`).
 - Calculus: `d/dx`, Σ, Π and lim act on the term after them (`d/dx x² + 1 = 2x + 1`); use parentheses or a fraction for more. Indefinite integrals show `+ C` (a line defining a variable from one stores the antiderivative without C). Integration covers standard forms of linear arguments, rational functions (rational roots, then real factors with radical coefficients: quadratics, (x+h)³+k, Ferrari-splittable quartics like x⁴+1, repeated factors), powers/products of trig functions, b^(ax)·sin/cos(bx), u-substitution, and parts for polynomial × exp/trig/log/inverse-trig; otherwise indefinite → error, definite → numeric ≈. Infinite sums: exact for geometric, even p-series, xⁿ/n!, telescoping rational terms; others numeric ≈ when convergence can be established. Infinite products: exact for rational factors whose Γ ratios are rational or involve √π (Wallis) and for b^g(n); divergence is detected; others numeric ≈.
 - Limits: two-sided unless written `a^{+}` / `a^{-}`; results can be ±∞ (shown in both modes). If only one side is defined (√x at 0) that side is used. No exact answer → ≈ from Richardson extrapolation; if that doesn't settle either → "Couldn't find this limit". Exact answers with no other variables are cross-checked numerically and dropped if they disagree.
+- Graphing: x and y can't be defined by lines; curves keep their color by line id; implicit curves are traced on a 4px grid, so very thin features or tangential zeros can be missed. Traced-point coordinates come from the drawn samples (interpolated), not re-evaluated. Zooming past a scale step retraces implicit curves over a few frames (the previous curve stays drawn meanwhile). Not yet: sliders for free variables, intersection/extremum points, polar/parametric equations (the polar *grid* exists), tracing in a Web Worker.
 - Not yet supported: inequalities, systems of equations solved together (they're reported as circular), complex numbers, functions like f(x), partial derivatives, infinite products with irreducible factors that aren't shifts of each other (Π(1+1/n²) is ≈ only), limits needing more than ~6 L'Hôpital steps.

@@ -15,9 +15,19 @@
     onUpOutOf?: () => void;
     onDownOutOf?: () => void;
     label?: string;
+    /** Let phones open their own keyboard (when the app's keypad is hidden). */
+    allowSystemKeyboard?: boolean;
   }
 
-  let { latex = $bindable(''), onSubmit, onDeleteOutOf, onUpOutOf, onDownOutOf, label = 'Math input' }: Props = $props();
+  let {
+    latex = $bindable(''),
+    onSubmit,
+    onDeleteOutOf,
+    onUpOutOf,
+    onDownOutOf,
+    label = 'Math input',
+    allowSystemKeyboard = false,
+  }: Props = $props();
 
   let host: HTMLSpanElement;
   let field = $state.raw<EditableMathField | null>(null);
@@ -26,15 +36,16 @@
   let focusWhenReady = false;
 
   /**
-   * The app has its own keypad, so stop phones from popping up the system keyboard.
+   * While the app's own keypad is showing, stop phones from popping up the system keyboard.
    * inputmode="none" only hides the virtual keyboard; the textarea stays focusable, so
    * the caret, long-press paste/select and hardware keyboards keep working
    * (unlike readonly, which would break paste).
    */
-  function suppressOnScreenKeyboard(editorHost: HTMLElement): void {
-    const hiddenTextarea = editorHost.querySelector('textarea');
-    hiddenTextarea?.setAttribute('inputmode', 'none');
-  }
+  $effect(() => {
+    if (!field) return;
+    const hiddenTextarea = host.querySelector('textarea');
+    hiddenTextarea?.setAttribute('inputmode', allowSystemKeyboard ? 'text' : 'none');
+  });
 
   onMount(() => {
     let destroyed = false;
@@ -53,7 +64,6 @@
             downOutOf: () => onDownOutOf?.(),
           },
         });
-        suppressOnScreenKeyboard(host);
         created.latex(latex);
         if (focusWhenReady) created.focus();
         field = created;

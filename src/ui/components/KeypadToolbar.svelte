@@ -2,7 +2,7 @@
   import SegmentedToggle from './SegmentedToggle.svelte';
   import type { AngleMode } from '../../math';
   import type { KeypadTab, KeypadTabId } from '../keypad/keys';
-  import type { DisplayMode } from '../types';
+  import type { AppLink, DisplayMode } from '../types';
 
   interface Props {
     tabs: KeypadTab[];
@@ -14,6 +14,7 @@
     onUndo: () => void;
     onRedo: () => void;
     onClearAll: () => void;
+    appLink?: AppLink;
   }
 
   let {
@@ -26,6 +27,7 @@
     onUndo,
     onRedo,
     onClearAll,
+    appLink,
   }: Props = $props();
 
   const ANGLE_OPTIONS: { value: AngleMode; label: string }[] = [
@@ -66,6 +68,9 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7h5V2M19.5 6.5A9 9 0 1 0 21 13" /></svg>
     </button>
     <button type="button" class="text-button" onmousedown={keepFocus} onclick={onClearAll}>clear all</button>
+    {#if appLink}
+      <a class="text-button" href={appLink.href}>{appLink.label}</a>
+    {/if}
   </div>
 </div>
 
@@ -136,6 +141,7 @@
     font-size: 1.1rem;
     color: var(--color-text-muted);
     cursor: pointer;
+    text-decoration: none;
   }
 
   .text-button:hover,

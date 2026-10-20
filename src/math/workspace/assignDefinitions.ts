@@ -15,12 +15,16 @@ export interface DefinitionPlan {
  * 2. Other equations with exactly one variable not defined elsewhere claim that variable
  *    (so `2x = 6` defines x). Repeated until nothing changes, so a definition further down
  *    can make an equation further up solvable.
+ * Lines that mention a reserved variable never define anything: the graphing app keeps x and
+ * y free so `y = 2x` is a curve to plot rather than a value for y.
  */
-export function assignDefinitions(lines: ParsedLine[]): DefinitionPlan {
+export function assignDefinitions(lines: ParsedLine[], reserved: ReadonlySet<string> = new Set()): DefinitionPlan {
+  const mentionsReserved = (line: ParsedLine) =>
+    line.kind === 'equation' && line.variables.some((variable) => reserved.has(variable));
   const targets: (string | null)[] = lines.map(() => null);
   const explicitLines = new Map<string, number[]>();
   lines.forEach((line, index) => {
-    if (line.kind !== 'equation' || !line.explicitTarget) return;
+    if (line.kind !== 'equation' || !line.explicitTarget || mentionsReserved(line)) return;
     explicitLines.set(line.explicitTarget, [...(explicitLines.get(line.explicitTarget) ?? []), index]);
   });
 
@@ -36,7 +40,7 @@ export function assignDefinitions(lines: ParsedLine[]): DefinitionPlan {
   while (changed) {
     changed = false;
     lines.forEach((line, index) => {
-      if (line.kind !== 'equation' || targets[index] !== null) return;
+      if (line.kind !== 'equation' || targets[index] !== null || mentionsReserved(line)) return;
       const unknowns = line.variables.filter((variable) => !definers.has(variable) && !duplicates.has(variable));
       if (unknowns.length !== 1) return;
       definers.set(unknowns[0], index);

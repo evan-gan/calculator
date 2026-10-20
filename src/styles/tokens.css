@@ -23,6 +23,19 @@
   --color-key-border: #c4c4c4;
   --color-key-icon-muted: #b9b9b9;
 
+  /* Graphing: curve colors in a fixed order (checked for color-blind separation), then the plane. */
+  --color-graph-1: #2a78d6;
+  --color-graph-2: #eb6834;
+  --color-graph-3: #1baf7a;
+  --color-graph-4: #eda100;
+  --color-graph-5: #e87ba4;
+  --color-graph-6: #008300;
+  --color-graph-bg: #ffffff;
+  --color-graph-grid-minor: #f0f0ee;
+  --color-graph-grid-major: #dcdcd8;
+  --color-graph-axis: #4a4a48;
+  --color-graph-label: #4f4f4f;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -47,7 +60,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-  --color-bg: #0f1115;
+    --color-bg: #0f1115;
     --color-surface: #16181d;
     --color-surface-muted: #1d2027;
     --color-border: #343943;
@@ -68,6 +81,17 @@
     --color-key-control: #3b404c;
     --color-key-border: #444a57;
     --color-key-icon-muted: #555b67;
+    --color-graph-1: #3987e5;
+    --color-graph-2: #d95926;
+    --color-graph-3: #199e70;
+    --color-graph-4: #c98500;
+    --color-graph-5: #d55181;
+    --color-graph-6: #008300;
+    --color-graph-bg: #16181d;
+    --color-graph-grid-minor: #1f2228;
+    --color-graph-grid-major: #2e323a;
+    --color-graph-axis: #b4bac4;
+    --color-graph-label: #c3c8d0;
   }
 }
 
@@ -94,4 +118,15 @@
   --color-key-control: #3b404c;
   --color-key-border: #444a57;
   --color-key-icon-muted: #555b67;
+  --color-graph-1: #3987e5;
+  --color-graph-2: #d95926;
+  --color-graph-3: #199e70;
+  --color-graph-4: #c98500;
+  --color-graph-5: #d55181;
+  --color-graph-6: #008300;
+  --color-graph-bg: #16181d;
+  --color-graph-grid-minor: #1f2228;
+  --color-graph-grid-major: #2e323a;
+  --color-graph-axis: #b4bac4;
+  --color-graph-label: #c3c8d0;
 }

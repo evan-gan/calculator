@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import MathField from './MathField.svelte';
   import ResultView from './ResultView.svelte';
   import type { CalculationResult } from '../../math';
@@ -9,7 +10,11 @@
     latex: string;
     result: CalculationResult;
     mode: DisplayMode;
-    showPlaceholder: boolean;
+    /** Hint shown while the line is empty, or null for none. */
+    placeholder: string | null;
+    allowSystemKeyboard?: boolean;
+    /** Drawn before the input, e.g. the graphing app's curve color. */
+    marker?: Snippet;
     onEnter: () => void;
     onFocus: () => void;
     onRemove: () => void;
@@ -23,7 +28,9 @@
     latex = $bindable(),
     result,
     mode,
-    showPlaceholder,
+    placeholder,
+    allowSystemKeyboard = false,
+    marker,
     onEnter,
     onFocus,
     onRemove,
@@ -44,6 +51,7 @@
 </script>
 
 <li class="row" onfocusin={onFocus}>
+  {@render marker?.()}
   <div class="field">
     <MathField
       bind:this={mathField}
@@ -53,9 +61,10 @@
       onUpOutOf={onUp}
       onDownOutOf={onDown}
       label="Expression or equation"
+      {allowSystemKeyboard}
     />
-    {#if showPlaceholder && latex === ''}
-      <span class="placeholder" aria-hidden="true">Try √72, 2x + 1 = 7, or a = 5 then use a in another line</span>
+    {#if placeholder && latex === ''}
+      <span class="placeholder" aria-hidden="true">{placeholder}</span>
     {/if}
   </div>
   <div class="output" aria-live="polite">

@@ -3,7 +3,7 @@
   import KeypadToolbar from './KeypadToolbar.svelte';
   import type { AngleMode } from '../../math';
   import { isSpacer, KEYPAD_TABS, type KeyAction, type KeyDefinition, type KeypadTabId } from '../keypad/keys';
-  import type { DisplayMode } from '../types';
+  import type { AppLink, DisplayMode } from '../types';
 
   interface Props {
     angleMode: AngleMode;
@@ -14,6 +14,8 @@
     onUndo: () => void;
     onRedo: () => void;
     onClearAll: () => void;
+    /** Link to the other app (calculator ↔ graphing), shown in the toolbar. */
+    appLink?: AppLink;
   }
 
   let {
@@ -25,6 +27,7 @@
     onUndo,
     onRedo,
     onClearAll,
+    appLink,
   }: Props = $props();
 
   let activeTab = $state<KeypadTabId>('main');
@@ -56,6 +59,7 @@
     {onUndo}
     {onRedo}
     {onClearAll}
+    {appLink}
   />
   <div class="groups" style:grid-template-columns={tab.groups.map((group) => `${group.columns}fr`).join(' ')}>
     {#each tab.groups as group, groupIndex (`${tab.id}-${groupIndex}`)}

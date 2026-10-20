@@ -16,6 +16,7 @@ A scientific calculator that gives **exact** answers (fractions, radicals, multi
 - **Calculus:** derivatives, integrals, sums, products and limits (exact where possible, otherwise marked ≈)
 - **Live lines:** define `a = 5` on one line and use it on any other
 - **Input:** type with MathQuill or use the on-screen keypad
+- **Graphing app** (`/graphing/`): the same engine with a pan/zoom graph of `y = f(x)`, `x = g(y)` and implicit curves like `x² + y² = 25`; the keypad is hidden until you ask for it
 
 ## Getting started
 
@@ -32,11 +33,12 @@ pnpm build    # static build to dist/
 
 ```
 src/
-  App.svelte, main.ts   App shell
-  ui/                   Components, keypad layout, MathQuill setup
+  scientific/           Calculator app shell (index.html)
+  graphing/             Graphing app shell, canvas, pan/zoom (graphing/index.html)
+  ui/                   Shared components, keypad layout, MathQuill setup
   styles/               Design tokens and global CSS
   math/                 Math engine (no UI code; the UI only imports math/index.ts)
-    parse/  simplify/  operations/  solve/  calculus/  workspace/  format/
+    parse/  simplify/  operations/  solve/  calculus/  workspace/  graph/  format/
 tests/                  Mirrors src/
 ```
 

@@ -2,7 +2,7 @@ import type { ExpressionLine } from '../types';
 
 // The expression list is kept in this browser between visits. Storage can be unavailable
 // (private mode, blocked site data), in which case the app simply starts empty.
-const STORAGE_KEY = 'exact-calculator:lines';
+// Each app passes its own key so the calculator and the graphing app keep separate lists.
 
 function isExpressionLine(value: unknown): value is ExpressionLine {
   return (
@@ -14,9 +14,9 @@ function isExpressionLine(value: unknown): value is ExpressionLine {
 }
 
 /** Saved lines, or null if there are none or they can't be read. */
-export function loadSavedLines(): ExpressionLine[] | null {
+export function loadSavedLines(storageKey: string): ExpressionLine[] | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isExpressionLine) ? parsed : null;
@@ -26,9 +26,9 @@ export function loadSavedLines(): ExpressionLine[] | null {
   }
 }
 
-export function saveLines(lines: ExpressionLine[]): void {
+export function saveLines(storageKey: string, lines: ExpressionLine[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+    localStorage.setItem(storageKey, JSON.stringify(lines));
   } catch (error) {
     console.warn('Could not save calculator lines (browser storage unavailable).', error);
   }
