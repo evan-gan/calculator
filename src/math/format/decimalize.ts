@@ -1,7 +1,7 @@
 import { containsVariable } from '../ast/inspect';
 import { mul, num, variable, type Expr } from '../ast/nodes';
 import { evaluate } from '../evaluate/evaluate';
-import { floatToLatex, rationalToDecimalLatex, type NumberNotation } from './toDecimal';
+import { constantToFloatLatex, rationalToDecimalLatex, type NumberNotation } from './toDecimal';
 import { toLatex } from './toLatex';
 
 // Decimal display of expressions that still contain variables (5x/6 -> 0.833333x).
@@ -11,7 +11,8 @@ import { toLatex } from './toLatex';
 function decimalPlaceholder(constant: Expr, notation: NumberNotation): Expr {
   if (constant.type === 'num' && constant.value.isInteger()) return constant;
   const value = evaluate(constant);
-  const text = constant.type === 'num' ? rationalToDecimalLatex(constant.value.abs(), notation) : floatToLatex(Math.abs(value), notation);
+  const magnitude = value < 0 ? mul(num(-1), constant) : constant;
+  const text = constant.type === 'num' ? rationalToDecimalLatex(constant.value.abs(), notation) : constantToFloatLatex(magnitude, notation);
   const placeholder = variable(text);
   // Keep the minus sign outside so sums print "x - 0.5" rather than "x + -0.5".
   return value < 0 ? mul(num(-1), placeholder) : placeholder;

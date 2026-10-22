@@ -5,7 +5,7 @@ import { evaluate } from '../evaluate/evaluate';
 import { differenceOf, quotientOf, sumOf } from '../operations/arithmetic';
 import type { Rational } from '../number/rational';
 import type { ExactSolution, Solution, SolveOutcome } from '../solve/types';
-import { floatToLatex, rationalToDecimalLatex, SIGNIFICANT_DIGITS, type NumberNotation } from './toDecimal';
+import { constantToFloatLatex, floatToLatex, rationalToDecimalLatex, SIGNIFICANT_DIGITS, type NumberNotation } from './toDecimal';
 import { plusMinusToLatex, toLatex } from './toLatex';
 import { toDecimalLatexWithVariables } from './decimalize';
 
@@ -85,7 +85,7 @@ function decimalList(variable: string, values: Expr[] | number[], notation: Numb
     if (typeof value === 'number') return floatToLatex(value, notation);
     if (value.type === 'num') return rationalToDecimalLatex(value.value, notation);
     // A definition like y = 2x keeps its variables; only the numbers become decimals.
-    return containsVariable(value) ? toDecimalLatexWithVariables(value, notation) : floatToLatex(evaluate(value), notation);
+    return containsVariable(value) ? toDecimalLatexWithVariables(value, notation) : constantToFloatLatex(value, notation);
   });
   return `${variable}${allExact ? '=' : '\\approx '}${texts.join(LIST_SEPARATOR)}`;
 }
