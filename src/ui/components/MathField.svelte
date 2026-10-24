@@ -33,7 +33,7 @@
   let field = $state.raw<EditableMathField | null>(null);
   let loadError = $state<string | null>(null);
   // focus() can be called before MathQuill finishes loading (e.g. a just-added line).
-  let focusWhenReady = false;
+  let focusWhenReady: { cursorAtEnd: boolean } | null = null;
 
   /**
    * While the app's own keypad is showing, stop phones from popping up the system keyboard.
@@ -65,8 +65,8 @@
           },
         });
         created.latex(latex);
-        if (focusWhenReady) created.focus();
         field = created;
+        if (focusWhenReady) focus(focusWhenReady.cursorAtEnd);
       })
       .catch((error: unknown) => {
         const reason = error instanceof Error ? error.message : String(error);
@@ -102,9 +102,17 @@
     field.focus();
   }
 
-  export function focus(): void {
-    if (field) field.focus();
-    else focusWhenReady = true;
+  /**
+   * Give the field keyboard focus. MathQuill otherwise puts the cursor back where it last was,
+   * so `cursorAtEnd` is for arriving from elsewhere (deleting the line below, clicking the row).
+   */
+  export function focus(cursorAtEnd = false): void {
+    if (!field) {
+      focusWhenReady = { cursorAtEnd };
+      return;
+    }
+    if (cursorAtEnd) field.moveToRightEnd();
+    field.focus();
   }
 </script>
 

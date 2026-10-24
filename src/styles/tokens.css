@@ -12,6 +12,8 @@
   --color-accent-text: #ffffff;
   --color-accent-soft: #d6e3f7;
   --color-accent-strong-text: #2257b3;
+  /* Highlighted (selected) text everywhere: page text, inputs and answers. */
+  --color-selection: #bcd3f5;
   --color-error: #b3261e;
   --color-error-soft: #fbe9e7;
   --color-success: #1e7a46;
@@ -71,6 +73,7 @@
     --color-accent-text: #0b1220;
     --color-accent-soft: #22324d;
     --color-accent-strong-text: #9cc0ff;
+    --color-selection: #2f4c7a;
     --color-error: #f2958d;
     --color-error-soft: #3a2220;
     --color-success: #7fd3a1;
@@ -108,6 +111,7 @@
   --color-accent-text: #0b1220;
   --color-accent-soft: #22324d;
   --color-accent-strong-text: #9cc0ff;
+  --color-selection: #2f4c7a;
   --color-error: #f2958d;
   --color-error-soft: #3a2220;
   --color-success: #7fd3a1;

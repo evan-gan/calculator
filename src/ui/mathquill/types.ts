@@ -13,6 +13,7 @@ export interface EditableMathField extends MathQuillField {
   typedText(text: string): EditableMathField;
   keystroke(keys: string): EditableMathField;
   focus(): EditableMathField;
+  moveToRightEnd(): EditableMathField;
   blur(): EditableMathField;
 }
 

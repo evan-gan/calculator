@@ -45,12 +45,25 @@
     mathField.applyAction(action);
   }
 
-  export function focus(): void {
-    mathField.focus();
+  export function focus(cursorAtEnd = false): void {
+    mathField.focus(cursorAtEnd);
+  }
+
+  // The input, the answer (selectable for copying) and the delete button handle their own presses.
+  const SELF_HANDLED_PARTS = '.mq-editable-field, .output, button';
+
+  /** A press anywhere else on the row (padding, empty space) edits this line. */
+  function handleRowPress(event: MouseEvent): void {
+    if (event.button !== 0) return;
+    if (event.target instanceof Element && event.target.closest(SELF_HANDLED_PARTS)) return;
+    // Without this the press would blur the field again right after focusing it.
+    event.preventDefault();
+    mathField.focus(true);
   }
 </script>
 
-<li class="row" onfocusin={onFocus}>
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -- a mouse shortcut only; the field itself is keyboard-focusable -->
+<li class="row" onfocusin={onFocus} onmousedown={handleRowPress}>
   {@render marker?.()}
   <div class="field">
     <MathField
@@ -92,6 +105,7 @@
     border-bottom: 1px solid var(--color-row-border);
     box-shadow: inset 4px 0 0 transparent;
     transition: box-shadow 120ms ease;
+    cursor: text;
   }
 
   /* Accent bar on the left marks the line being edited. */

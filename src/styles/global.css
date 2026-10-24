@@ -38,7 +38,38 @@ button {
   border-left-color: var(--color-text) !important;
 }
 
+/*
+ * MathQuill can leave a field's cursor drawn after focus has moved on (e.g. a mouse press
+ * released outside the window), which looks like two lines are being edited. Only the field
+ * that really holds keyboard focus shows its cursor.
+ */
+.mq-editable-field:not(:focus-within) .mq-cursor {
+  visibility: hidden;
+}
+
+/*
+ * One highlight color for every selection. MathQuill paints selections itself with the system
+ * Highlight color (and gray once blurred) on the selection *and* on nested pieces like
+ * fractions and brackets, so all of those are overridden, and the text keeps its own color.
+ */
+::selection {
+  background: var(--color-selection);
+  color: inherit;
+}
+
 .mq-math-mode .mq-selection,
-.mq-editable-field .mq-selection {
-  background: var(--color-accent-soft) !important;
+.mq-editable-field .mq-selection,
+.mq-math-mode .mq-selection .mq-non-leaf,
+.mq-editable-field .mq-selection .mq-non-leaf,
+.mq-math-mode .mq-selection .mq-scaled,
+.mq-editable-field .mq-selection .mq-scaled,
+.mq-math-mode .mq-selection.mq-blur,
+.mq-editable-field .mq-selection.mq-blur,
+.mq-math-mode .mq-selection.mq-blur .mq-non-leaf,
+.mq-editable-field .mq-selection.mq-blur .mq-non-leaf,
+.mq-math-mode .mq-selection.mq-blur .mq-scaled,
+.mq-editable-field .mq-selection.mq-blur .mq-scaled {
+  background: var(--color-selection) !important;
+  color: inherit !important;
+  border-color: currentColor !important;
 }

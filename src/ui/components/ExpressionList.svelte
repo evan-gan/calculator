@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick, type Snippet } from 'svelte';
   import ExpressionRow from './ExpressionRow.svelte';
+  import NewLineGhost from './NewLineGhost.svelte';
   import type { CalculationResult } from '../../math';
   import type { KeyAction } from '../keypad/keys';
   import type { LineEditor } from '../state/lineEditor.svelte';
@@ -25,10 +26,10 @@
   const rows: Record<number, ExpressionRow> = {};
 
   onMount(() => {
-    editor.focusHandler = async (id) => {
+    editor.focusHandler = async (id, cursorAtEnd) => {
       // A just-added line isn't rendered until the next tick.
       await tick();
-      rows[id]?.focus();
+      rows[id]?.focus(cursorAtEnd);
     };
     editor.focusLine(editor.activeId);
     // Capture phase, so MathQuill's textarea never sees ⌘Z (it would undo inside its hidden
@@ -89,6 +90,7 @@
     </ExpressionRow>
   {/each}
 </ol>
+<NewLineGhost onAdd={() => editor.addLineAtEnd()} />
 
 <style>
   .lines {

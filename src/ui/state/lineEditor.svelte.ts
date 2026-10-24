@@ -14,7 +14,7 @@ export class LineEditor {
   canUndo = $state(false);
   canRedo = $state(false);
   /** Set by ExpressionList: moves keyboard focus into a line once it's on screen. */
-  focusHandler: ((id: number) => void) | null = null;
+  focusHandler: ((id: number, cursorAtEnd: boolean) => void) | null = null;
 
   private nextId: number;
   private readonly undoHistory = new UndoHistory<string>();
@@ -51,9 +51,9 @@ export class LineEditor {
     return { id: this.nextId++, latex: '' };
   }
 
-  focusLine(id: number): void {
+  focusLine(id: number, cursorAtEnd = false): void {
     this.activeId = id;
-    this.focusHandler?.(id);
+    this.focusHandler?.(id, cursorAtEnd);
   }
 
   addLineAfter(id: number): void {
@@ -62,10 +62,15 @@ export class LineEditor {
     this.focusLine(line.id);
   }
 
+  addLineAtEnd(): void {
+    this.addLineAfter(this.lines[this.lines.length - 1].id);
+  }
+
   deleteLine(id: number): void {
     const { lines, focusId } = removeLine(this.lines, id, () => this.createEmptyLine());
     this.lines = lines;
-    this.focusLine(focusId);
+    // Cursor at the end, so holding backspace keeps deleting from the end of the line above.
+    this.focusLine(focusId, true);
   }
 
   moveFocus(id: number, offset: number): void {
