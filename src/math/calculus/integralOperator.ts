@@ -70,7 +70,7 @@ export function simplifyIntegral(call: FunctionNode): Expr {
   if (bounds) return simplifyDefiniteIntegral(integrand, variable, simplify(bounds.lower), simplify(bounds.upper));
   const antiderivative = findAntiderivative(integrand, variable);
   if (!antiderivative) {
-    throw new MathError("Couldn't find an exact antiderivative for this integral. Add limits to get a numeric value.");
+    throw new MathError("Couldn't find an exact antiderivative for this integral. Add limits to get a numeric value.", 'unsupported');
   }
   return antiderivative;
 }

@@ -16,6 +16,8 @@
   --color-selection: #bcd3f5;
   --color-error: #b3261e;
   --color-error-soft: #fbe9e7;
+  /* Things the calculator can't do yet (not the user's mistake). */
+  --color-warning: #c28a00;
   --color-success: #1e7a46;
   --color-success-soft: #e3f4ea;
   --color-keypad-bg: #ededed;
@@ -76,6 +78,8 @@
     --color-selection: #2f4c7a;
     --color-error: #f2958d;
     --color-error-soft: #3a2220;
+  --color-warning: #e3b341;
+    --color-warning: #e3b341;
     --color-success: #7fd3a1;
     --color-success-soft: #1d3428;
     --color-keypad-bg: #1e2128;

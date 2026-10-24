@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ErrorBadge from './ErrorBadge.svelte';
   import StaticMath from './StaticMath.svelte';
   import SolutionLines from './SolutionLines.svelte';
   import type { CalculationResult } from '../../math';
@@ -7,17 +8,15 @@
   interface Props {
     result: CalculationResult;
     mode: DisplayMode;
-    /** Show errors in muted text: while typing, half-finished input is expected, not alarming. */
-    quietErrors?: boolean;
   }
 
   // Renders any calculation result; used by the input row and by history rows.
-  let { result, mode, quietErrors = false }: Props = $props();
+  let { result, mode }: Props = $props();
 </script>
 
 <div class="result-view">
   {#if result.kind === 'error'}
-    <p class="error" class:quiet={quietErrors} role="status">{result.message}</p>
+    <ErrorBadge message={result.message} category={result.category} />
   {:else if result.kind === 'value'}
     <div class="answer"><StaticMath latex={result.result[mode]} /></div>
   {:else if result.kind === 'simplified'}
@@ -56,20 +55,6 @@
     font-size: var(--font-size-small);
   }
 
-  .error {
-    margin: 0;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-small);
-    background: var(--color-error-soft);
-    color: var(--color-error);
-    font-size: var(--font-size-small);
-  }
-
-  .error.quiet {
-    padding: 0;
-    background: none;
-    color: var(--color-text-muted);
-  }
 
   .truth {
     margin: 0;

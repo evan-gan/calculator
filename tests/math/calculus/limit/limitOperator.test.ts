@@ -18,6 +18,7 @@ describe('lim on screen', () => {
     expect(calculate('\\lim_{x\\to0}\\frac{1}{x}')).toEqual({
       kind: 'error',
       message: "This limit doesn't exist: it approaches -∞ from the left but ∞ from the right.",
+      category: 'invalid',
     });
     expect(calculate('\\lim_{x\\to0}\\frac{\\left|x\\right|}{x}')).toMatchObject({ message: "This limit doesn't exist: it approaches -1 from the left but 1 from the right." });
   });

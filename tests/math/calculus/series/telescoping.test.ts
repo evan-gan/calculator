@@ -30,11 +30,12 @@ describe('telescoping sums of rational functions', () => {
     expect(calculate('\\sum_{n=1}^{\\infty}\\frac{1}{n+1}')).toEqual({
       kind: 'error',
       message: 'This series diverges, so it has no value. (Its terms shrink like 1/n.)',
+      category: 'invalid',
     });
   });
 
   test('a term that divides by zero inside the range is an error', () => {
-    expect(calculate('\\sum_{n=0}^{\\infty}\\frac{1}{n\\left(n+1\\right)}')).toEqual({ kind: 'error', message: 'This sum divides by zero at n = 0.' });
+    expect(calculate('\\sum_{n=0}^{\\infty}\\frac{1}{n\\left(n+1\\right)}')).toEqual({ kind: 'error', message: 'This sum divides by zero at n = 0.', category: 'invalid' });
   });
 
   test('non-telescoping rational terms stay numeric', () => {

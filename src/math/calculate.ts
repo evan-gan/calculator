@@ -1,7 +1,7 @@
 import { containsCalculusOperator, containsIndefiniteIntegral } from './ast/calculus';
 import { collectVariables } from './ast/inspect';
 import { num, subtract, type Expr, type Statement } from './ast/nodes';
-import { MathError } from './errors';
+import { MathError, type MathErrorCategory } from './errors';
 import { numericSign } from './evaluate/evaluate';
 import { decimalRelation, formatSolveOutcome, type SolutionDisplay } from './format/formatSolutions';
 import { toDecimalLatexWithVariables } from './format/decimalize';
@@ -22,7 +22,7 @@ export interface ResultLine {
 
 export type CalculationResult =
   | { kind: 'empty' }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string; category: MathErrorCategory }
   /** A number: 0.1 + 0.2 = 3/10 */
   | { kind: 'value'; result: ResultLine }
   /** An expression with variables, simplified. `roots` is filled in when it has one variable. */
@@ -77,7 +77,7 @@ function solveSingleUnknown(left: Expr, right: Expr): CalculationResult {
   const variables = collectVariables(subtract(left, right));
   if (variables.length === 0) return checkEquality(left, right);
   if (variables.length > 1) {
-    throw new MathError(`Solving works with one unknown at a time, but this equation has ${variables.join(', ')}.`);
+    throw new MathError(`Solving works with one unknown at a time, but this equation has ${variables.join(', ')}.`, 'unresolved');
   }
   return { kind: 'solved', solutions: formatSolveOutcome(solveEquation(left, right, variables[0])) };
 }
@@ -104,10 +104,10 @@ export function parseLine(latex: string, options: CalculationOptions = {}): Stat
  * else is a bug, so it is logged with the input for debugging.
  */
 export function errorResult(error: unknown, latex: string): CalculationResult {
-  if (error instanceof MathError) return { kind: 'error', message: error.message };
+  if (error instanceof MathError) return { kind: 'error', message: error.message, category: error.category };
   console.error('Calculator internal error while evaluating', latex, error);
   const detail = error instanceof Error ? error.message : String(error);
-  return { kind: 'error', message: `Internal calculator error (${detail}). Please report this input.` };
+  return { kind: 'error', message: `Internal calculator error (${detail}). Please report this input.`, category: 'invalid' };
 }
 
 /**

@@ -34,12 +34,13 @@ describe('infinite products', () => {
     expect(calculate('\\prod_{n=1}^{\\infty}\\left(1+\\frac{1}{n}\\right)')).toEqual({
       kind: 'error',
       message: 'This product diverges, so it has no value. (Its factors approach 1 too slowly.)',
+      category: 'invalid',
     });
     expect(calculate('\\prod_{n=1}^{\\infty}2')).toMatchObject({ message: "This product diverges, so it has no value. (Its factors don't approach 1.)" });
     expect(calculate('\\prod_{n=1}^{\\infty}2^{n}')).toMatchObject({ message: 'This product diverges, so it has no value. (The sum of its exponents diverges.)' });
   });
 
   test('a factor that divides by zero is reported at its index', () => {
-    expect(calculate('\\prod_{n=1}^{\\infty}\\frac{n}{n-1}')).toEqual({ kind: 'error', message: 'This product divides by zero at n = 1.' });
+    expect(calculate('\\prod_{n=1}^{\\infty}\\frac{n}{n-1}')).toEqual({ kind: 'error', message: 'This product divides by zero at n = 1.', category: 'invalid' });
   });
 });

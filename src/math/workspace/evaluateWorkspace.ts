@@ -40,7 +40,7 @@ export function workspaceLineResult(workspace: PreparedWorkspace, index: number)
   if (line.kind === 'invalid') return { result: line.result, defines: null };
   const target = plan.targets[index];
   if (target !== null && plan.duplicates.has(target)) {
-    return { result: { kind: 'error', message: `${displayName(target)} is defined in more than one line.` }, defines: null };
+    return { result: { kind: 'error', message: `${displayName(target)} is defined in more than one line.`, category: 'invalid' }, defines: null };
   }
   if (target !== null) {
     const result: CalculationResult = resolver.resultForLine(index) ?? { kind: 'empty' };

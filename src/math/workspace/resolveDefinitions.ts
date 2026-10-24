@@ -63,7 +63,7 @@ export class DefinitionResolver {
     const cycleReason = this.cycleReasons.get(variable);
     if (cycleReason) {
       value = unavailable(cycleReason);
-      result = { kind: 'error', message: cycleReason };
+      result = { kind: 'error', message: cycleReason, category: 'invalid' };
     }
     this.values.set(variable, value);
     this.lineResults.set(lineIndex, result);
@@ -82,7 +82,7 @@ export class DefinitionResolver {
       if (variable === keep) continue;
       const value = this.valueOf(variable);
       if (value === null) continue;
-      if (value.kind === 'unavailable') throw new MathError(`Can't use ${displayName(variable)}: ${value.reason}`);
+      if (value.kind === 'unavailable') throw new MathError(`Can't use ${displayName(variable)}: ${value.reason}`, 'unresolved');
       substituted = substituteVariable(substituted, variable, value.expr);
     }
     return substituted;
@@ -116,7 +116,7 @@ export class DefinitionResolver {
       const right = this.substituteKnown(line.right, variable);
       const others = collectVariables(subtract(left, right)).filter((name) => name !== variable);
       if (others.length > 0) {
-        throw new MathError(`Can't solve for ${displayName(variable)} while ${others.map(displayName).join(', ')} has no value.`);
+        throw new MathError(`Can't solve for ${displayName(variable)} while ${others.map(displayName).join(', ')} has no value.`, 'unresolved');
       }
       const outcome = solveEquation(left, right, variable);
       return { value: valueFromOutcome(variable, outcome), result: { kind: 'solved', solutions: formatSolveOutcome(outcome) } };

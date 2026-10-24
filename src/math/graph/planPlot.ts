@@ -28,7 +28,7 @@ function rejectFreeVariables(variables: string[], axes: GraphAxes): void {
   if (free.length === 0) return;
   const names = free.map(displayName);
   const subject = names.length === 1 ? `${names[0]} needs a value` : `${names.join(', ')} need values`;
-  throw new MathError(`To graph this, ${subject}: add a line like ${names[0]} = 1.`);
+  throw new MathError(`To graph this, ${subject}: add a line like ${names[0]} = 1.`, 'unresolved');
 }
 
 /** `v = f(u)` (either side) where the lone variable doesn't appear in f. */

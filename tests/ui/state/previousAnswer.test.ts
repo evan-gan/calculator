@@ -10,7 +10,7 @@ describe('previousAnswer: what the ans key inserts', () => {
   });
 
   test('skips lines that are not numbers', () => {
-    expect(previousAnswer([value('=7'), { kind: 'error', message: 'bad' }, { kind: 'empty' }], 2)).toBe('7');
+    expect(previousAnswer([value('=7'), { kind: 'error', message: 'bad', category: 'invalid' }, { kind: 'empty' }], 2)).toBe('7');
   });
 
   test('null when there is no number above', () => {

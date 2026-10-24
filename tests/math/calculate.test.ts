@@ -39,11 +39,12 @@ describe('calculate (UI entry point)', () => {
     expect(calculate('x+y=1')).toEqual({
       kind: 'error',
       message: 'Solving works with one unknown at a time, but this equation has x, y.',
+      category: 'unresolved',
     });
   });
 
   test('bad input returns an error instead of throwing', () => {
-    expect(calculate('\\frac{1}{0}')).toEqual({ kind: 'error', message: 'Division by zero is undefined.' });
+    expect(calculate('\\frac{1}{0}')).toEqual({ kind: 'error', message: 'Division by zero is undefined.', category: 'invalid' });
     expect(calculate('2+').kind).toBe('error');
   });
 });

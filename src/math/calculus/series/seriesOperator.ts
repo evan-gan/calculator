@@ -57,7 +57,7 @@ function simplifyInfiniteSum(term: Expr, index: string, lower: Expr, unevaluated
   if (exact) return exact;
   if (collectVariables(term).some((name) => name !== index)) return unevaluated;
   const approximate = numericInfiniteSum((n) => evaluate(term, { [index]: n }), Number(start));
-  if (approximate === null) throw new MathError(SUM_NOT_FOUND_MESSAGE);
+  if (approximate === null) throw new MathError(SUM_NOT_FOUND_MESSAGE, 'unsupported');
   return unevaluated;
 }
 
@@ -98,7 +98,7 @@ function simplifyInfiniteProduct(term: Expr, index: string, lower: Expr, unevalu
   if (exact) return exact;
   if (collectVariables(term).some((name) => name !== index)) return unevaluated;
   const approximate = numericInfiniteProduct((n) => evaluate(term, { [index]: n }), Number(start));
-  if (approximate === null) throw new MathError(PRODUCT_NOT_FOUND_MESSAGE);
+  if (approximate === null) throw new MathError(PRODUCT_NOT_FOUND_MESSAGE, 'unsupported');
   return unevaluated;
 }
 

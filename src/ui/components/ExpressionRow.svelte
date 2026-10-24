@@ -81,7 +81,7 @@
     {/if}
   </div>
   <div class="output" aria-live="polite">
-    <ResultView {result} {mode} quietErrors />
+    <ResultView {result} {mode} />
   </div>
   <button
     type="button"

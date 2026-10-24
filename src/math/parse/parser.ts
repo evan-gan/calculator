@@ -490,7 +490,7 @@ function matchDerivativeOperator(tokens: Token[], start: number): { variable: st
   if (top.order !== bottom.order || top.order < 1) {
     throw new MathError('A derivative needs matching orders on top and bottom, like d²/dx².');
   }
-  if (top.order > MAX_DERIVATIVE_ORDER) throw new MathError(`Derivatives above order ${MAX_DERIVATIVE_ORDER} aren't supported.`);
+  if (top.order > MAX_DERIVATIVE_ORDER) throw new MathError(`Derivatives above order ${MAX_DERIVATIVE_ORDER} aren't supported.`, 'unsupported');
   return { variable: variableToken.value, order: top.order, end: bottom.end + 1 };
 }
 

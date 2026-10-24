@@ -91,7 +91,7 @@ class Tokenizer {
     if ('([{'.includes(char)) return this.push('open', char);
     if (')]}'.includes(char)) return this.push('close', char);
     if (char === '|') return this.push('bar', '|');
-    if (char === '<' || char === '>') throw new MathError('Inequalities are not supported yet. Use = to solve an equation.');
+    if (char === '<' || char === '>') throw new MathError('Inequalities are not supported yet. Use = to solve an equation.', 'unsupported');
     throw new MathError(`The character "${char}" isn't something this calculator understands.`);
   }
 
@@ -178,15 +178,15 @@ class Tokenizer {
     if (name === 'operatorname') return this.readOperatorName();
     if (name === 'mathrm' || name === 'text') return this.readTextConstant(name);
     if (['le', 'ge', 'leq', 'geq', 'lt', 'gt', 'ne', 'neq'].includes(name)) {
-      throw new MathError('Inequalities are not supported yet. Use = to solve an equation.');
+      throw new MathError('Inequalities are not supported yet. Use = to solve an equation.', 'unsupported');
     }
-    throw new MathError(`"\\${name}" isn't supported yet.`);
+    throw new MathError(`"\\${name}" isn't supported yet.`, 'unsupported');
   }
 
   private readOperatorName(): void {
     const word = this.readBracedWord('operatorname');
     const alias = OPERATOR_NAME_ALIASES[word];
-    if (!alias) throw new MathError(`The function "${word}" isn't supported yet.`);
+    if (!alias) throw new MathError(`The function "${word}" isn't supported yet.`, 'unsupported');
     this.push('function', alias);
   }
 

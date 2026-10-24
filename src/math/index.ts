@@ -17,3 +17,4 @@ export {
   type ViewWindow,
 } from './graph/types';
 export { evaluateNumberInput } from './evaluateNumber';
+export type { MathErrorCategory } from './errors';

@@ -83,14 +83,14 @@ function asExpr(result: LimitResult): Expr {
 /** When no exact answer was found: keep the limit unevaluated if the numbers settle, else explain. */
 function numericFallback(body: Expr, approaches: Approach[], unevaluated: Expr): Expr {
   const estimates = approaches.map((approach) => numericLimit(sampler(body, approach.variable), pointValue(approach), approach.direction));
-  if (estimates.some((estimate) => estimate === null)) throw new MathError("Couldn't find this limit. It may not exist.");
+  if (estimates.some((estimate) => estimate === null)) throw new MathError("Couldn't find this limit. It may not exist.", 'unsupported');
   const values = estimates as number[];
   const describeValue = (value: number) => (Number.isFinite(value) ? String(Number(value.toPrecision(6))) : value > 0 ? '∞' : '-∞');
   const agree = values.every((value) => value === values[0] || Math.abs(value - values[0]) <= AGREEMENT * Math.max(1, Math.abs(values[0])));
   if (!agree) {
     throw new MathError(`This limit doesn't exist: it approaches ${describeValue(values[0])} from the left but ${describeValue(values[1])} from the right.`);
   }
-  if (!Number.isFinite(values[0])) throw new MathError(`This limit seems to be ${describeValue(values[0])}, but that couldn't be confirmed exactly.`);
+  if (!Number.isFinite(values[0])) throw new MathError(`This limit seems to be ${describeValue(values[0])}, but that couldn't be confirmed exactly.`, 'unsupported');
   return unevaluated;
 }
 

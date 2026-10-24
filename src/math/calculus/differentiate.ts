@@ -71,7 +71,7 @@ function differentiateOperator(call: FunctionNode, variable: string): Expr {
   if (call.name === 'integral') return differentiateIntegral(call, variable);
   if (call.name === 'sum') return differentiateSum(call, variable);
   const what = call.name === 'product' ? 'product (Π)' : call.name === 'limit' ? 'limit' : 'expression';
-  throw new MathError(`Can't differentiate this ${what} yet.`);
+  throw new MathError(`Can't differentiate this ${what} yet.`, 'unsupported');
 }
 
 /**
@@ -98,7 +98,7 @@ function differentiateIntegral(call: FunctionNode, variable: string): Expr {
 function differentiateSum(call: FunctionNode, variable: string): Expr {
   const { body, variable: index, lower, upper } = readSeries(call);
   if (containsVariable(lower, variable) || containsVariable(upper, variable)) {
-    throw new MathError("Can't differentiate a sum whose limits depend on the variable.");
+    throw new MathError("Can't differentiate a sum whose limits depend on the variable.", 'unsupported');
   }
   return series(call.name as SeriesName, differentiate(body, variable), index, lower, upper);
 }
